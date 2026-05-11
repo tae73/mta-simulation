@@ -1,0 +1,136 @@
+# DGP Default Configuration
+# Du et al. (2019) + Shender et al. (2023) + CDA (2025) integrated framework
+
+n_users: 100000
+n_channels: 7
+target_conversion_rate: 0.025
+alpha_0: -5.0  # calibrated via binary search to hit 2-3% conversion
+inter_arrival_lambda_hours: 48.0
+max_touchpoints: 20
+random_seed: 42
+
+# --- Channel Definitions ---
+# beta: conversion effect coefficient (higher = stronger direct conversion effect)
+# decay_half_life_days: temporal decay half-life (Shender et al. framework)
+# funnel_position: upper / mid / lower
+channels:
+  - name: Display
+    beta: 0.3
+    decay_half_life_days: 14.0
+    funnel_position: upper
+
+  - name: Social
+    beta: 0.4
+    decay_half_life_days: 3.0
+    funnel_position: upper
+
+  - name: Organic Search
+    beta: 0.5
+    decay_half_life_days: 7.0
+    funnel_position: mid
+
+  - name: Paid Search
+    beta: 1.2
+    decay_half_life_days: 1.0
+    funnel_position: lower
+
+  - name: Email
+    beta: 0.8
+    decay_half_life_days: 5.0
+    funnel_position: mid
+
+  - name: Referral
+    beta: 0.5
+    decay_half_life_days: 7.0
+    funnel_position: mid
+
+  - name: Direct
+    beta: 0.7
+    decay_half_life_days: 2.0
+    funnel_position: lower
+
+# --- User Segments (Du et al. framework) ---
+# proportion: fraction of total users
+# geometric_p / geometric_offset: journey length ~ Geometric(p) + offset
+# eta: heterogeneity effect on conversion intensity
+# start_channels: preferred first-touch channels
+segments:
+  - name: New
+    proportion: 0.5
+    geometric_p: 0.25
+    geometric_offset: 1
+    eta: -0.3
+    start_channels: [Display, Social]
+
+  - name: Exploratory
+    proportion: 0.3
+    geometric_p: 0.2
+    geometric_offset: 2
+    eta: 0.0
+    start_channels: [Organic Search]
+
+  - name: Loyal
+    proportion: 0.2
+    geometric_p: 0.5
+    geometric_offset: 1
+    eta: 0.5
+    start_channels: [Email, Direct]
+
+# --- Cross-Channel Influence (CDA 2025 framework) ---
+# source → target synergy: delta added to log-intensity when source precedes target
+cross_influences:
+  - source: Display
+    target: Paid Search
+    delta: 0.4
+
+  - source: Social
+    target: Email
+    delta: 0.3
+
+  - source: Organic Search
+    target: Direct
+    delta: 0.2
+
+# --- Budget & Cost Configuration ---
+# Cost is an OBSERVATION layer only — does NOT affect conversion probability.
+# Enables ROI computation and budget optimization evaluation.
+budget_config:
+  total_budget: 200000.0          # total available marketing budget ($)
+  revenue_per_conversion: 100.0    # average revenue per conversion
+  cost_noise_sigma: 0.1           # log-normal noise on per-touchpoint cost
+
+  cost_defs:
+    - channel_name: Display
+      cost_type: cpm
+      base_cost_per_touchpoint: 0.005   # ~$5 CPM, 1 touchpoint ≈ 1 impression
+      segment_multipliers: {New: 1.2, Exploratory: 1.0, Loyal: 0.8}
+
+    - channel_name: Social
+      cost_type: cpm
+      base_cost_per_touchpoint: 0.008   # ~$8 CPM
+      segment_multipliers: {New: 1.3, Exploratory: 1.0, Loyal: 0.7}
+
+    - channel_name: Organic Search
+      cost_type: zero
+      base_cost_per_touchpoint: 0.0
+      segment_multipliers: {New: 1.0, Exploratory: 1.0, Loyal: 1.0}
+
+    - channel_name: Paid Search
+      cost_type: cpc
+      base_cost_per_touchpoint: 2.50    # ~$2.50 avg CPC
+      segment_multipliers: {New: 1.1, Exploratory: 1.0, Loyal: 0.9}
+
+    - channel_name: Email
+      cost_type: fixed
+      base_cost_per_touchpoint: 0.003   # ESP cost per send
+      segment_multipliers: {New: 1.0, Exploratory: 1.0, Loyal: 1.0}
+
+    - channel_name: Referral
+      cost_type: zero
+      base_cost_per_touchpoint: 0.0
+      segment_multipliers: {New: 1.0, Exploratory: 1.0, Loyal: 1.0}
+
+    - channel_name: Direct
+      cost_type: zero
+      base_cost_per_touchpoint: 0.0
+      segment_multipliers: {New: 1.0, Exploratory: 1.0, Loyal: 1.0}
