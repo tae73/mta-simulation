@@ -12,78 +12,28 @@ Metrics: Allocation MAE, Allocation Kendall's Tau (paid channels only).
 
 import json
 import logging
-import warnings
-from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from part1_simulation import AttributionResult, BudgetConfig, CHANNEL_NAMES
-from part1_simulation.config_loader import load_budget_config, load_dgp_config
+from part1_simulation.config_loader import load_budget_config
 from part1_simulation.evaluation.evaluate import evaluate_budget_allocation
-from part1_simulation.optimization.budget_optimizer import optimize_budget
+from part1_simulation.experiments._common import (
+    CATEGORY_COLORS,
+    METHOD_CATEGORIES,
+    prepare_output_dir,
+    reconstruct_credits_from_eval,
+    setup_experiment_logging,
+)
 
 logger = logging.getLogger(__name__)
-
-METHOD_CATEGORIES = {
-    "Last Click": "Rule-based", "First Click": "Rule-based",
-    "Linear": "Rule-based", "Time Decay (7.0d)": "Rule-based",
-    "Position-Based (40%/40%)": "Rule-based",
-    "Markov (order=1)": "Statistical", "Markov (order=2)": "Statistical",
-    "Shapley (model-based)": "Game-theoretic",
-    "Shapley (conv. rate)": "Game-theoretic",
-    "LSTM+Attention (attn weights)": "Deep Learning",
-    "LSTM+Attention (LOO)": "Deep Learning",
-    "Transformer (2L/2H)": "Deep Learning",
-    "Incremental Shapley": "Causal (incremental)", "Survival/Poisson (AICPE)": "Causal (incremental)",
-    "IPW": "Causal (debiased)", "Doubly Robust": "Causal (debiased)", "DML": "Causal (debiased)",
-    "CAMTA (Causal Attention)": "Causal (incremental)",
-}
-
-CATEGORY_COLORS = {
-    "Rule-based": "#4ECDC4", "Statistical": "#45B7D1",
-    "Game-theoretic": "#96CEB4", "Deep Learning": "#FFEAA7",
-    "Causal (debiased)": "#DDA0DD", "Causal (incremental)": "#B5D8B5",
-}
 
 CHANNEL_COLORS = {
     "Email": "#3498DB", "Display": "#2ECC71",
     "Social": "#F39C12", "Paid Search": "#E74C3C",
 }
-
-
-def reconstruct_credits_from_bias(
-    eval_csv: pd.DataFrame,
-    gt_a: Dict[str, float],
-) -> List[AttributionResult]:
-    """Reconstruct channel_credits from bias columns: credit_k = gt_a_k + bias_k."""
-    results = []
-    bias_cols = [c for c in eval_csv.columns if c.startswith("bias_")]
-    channels = [c.replace("bias_", "") for c in bias_cols]
-
-    for _, row in eval_csv.iterrows():
-        credits = {}
-        for ch, col in zip(channels, bias_cols):
-            credits[ch] = gt_a.get(ch, 0.0) + row[col]
-
-        # Clamp negatives and re-normalize
-        credits = {k: max(0.0, v) for k, v in credits.items()}
-        total = sum(credits.values())
-        if total > 0:
-            credits = {k: v / total for k, v in credits.items()}
-
-        results.append(AttributionResult(
-            method=row["method"],
-            channel_credits=credits,
-            channel_credits_raw=credits,
-            metadata={},
-        ))
-
-    return results
 
 
 def plot_allocation_comparison(
@@ -165,8 +115,7 @@ def run_experiment_07(
     output_dir: str = "results/part1",
 ) -> pd.DataFrame:
     """Run Experiment 07: budget allocation evaluation for all 18 methods."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path = prepare_output_dir(output_dir)
 
     # Load ground truth
     with open(f"{data_dir}/ground_truth.json") as f:
@@ -180,7 +129,7 @@ def run_experiment_07(
     logger.info(f"Loaded {len(eval_01)} methods from Experiment 01")
 
     # Reconstruct channel credits from bias
-    attr_results = reconstruct_credits_from_bias(eval_01, gt_a)
+    attr_results = reconstruct_credits_from_eval(eval_01, gt_a)
 
     # Load budget config
     budget_config = load_budget_config()
@@ -241,6 +190,5 @@ def run_experiment_07(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
-    warnings.filterwarnings("ignore")
+    setup_experiment_logging()
     run_experiment_07()

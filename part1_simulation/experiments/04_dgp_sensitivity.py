@@ -13,27 +13,29 @@ Setup: Four DGP variants on 20K users:
 Metric: MAE per method per variant.
 """
 
-import json
 import logging
-import warnings
-from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
 from part1_simulation.config_loader import load_dgp_config
 from part1_simulation.dgp.generate_data import generate_all_journeys
 from part1_simulation.evaluation.ground_truth import compute_ground_truth_intensity
-from part1_simulation.evaluation.metrics import compute_mae, compute_kendall_tau
-from part1_simulation.models.rule_based import compute_last_click, compute_linear, compute_time_decay
-from part1_simulation.models.markov import compute_markov_attribution
-from part1_simulation.models.shapley import compute_shapley_model_based
-from part1_simulation.models.causal.survival_attribution import compute_survival_attribution
-from part1_simulation.models.causal.propensity import compute_ipw_attribution
+from part1_simulation.evaluation.metrics import compute_kendall_tau, compute_mae
+from part1_simulation.experiments._common import (
+    prepare_output_dir,
+    setup_experiment_logging,
+)
 from part1_simulation.models.causal.dml import compute_dml_attribution
+from part1_simulation.models.causal.propensity import compute_ipw_attribution
+from part1_simulation.models.causal.survival_attribution import compute_survival_attribution
+from part1_simulation.models.markov import compute_markov_attribution
+from part1_simulation.models.rule_based import (
+    compute_last_click,
+    compute_linear,
+    compute_time_decay,
+)
+from part1_simulation.models.shapley import compute_shapley_model_based
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +78,7 @@ def _run_methods(journeys, config):
 
 def run_experiment_04(output_dir: str = "results/part1") -> pd.DataFrame:
     """Run Experiment 04: DGP assumption sensitivity."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path = prepare_output_dir(output_dir)
 
     all_rows = []
 
@@ -134,6 +135,5 @@ def run_experiment_04(output_dir: str = "results/part1") -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
-    warnings.filterwarnings("ignore")
+    setup_experiment_logging()
     run_experiment_04()

@@ -13,13 +13,8 @@ Setup: Vary alpha_0 to create different base conversion rates:
 Metric: Per-channel credit difference between Incremental and Total Shapley.
 """
 
-import json
 import logging
-import warnings
-from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -27,10 +22,12 @@ import pandas as pd
 from part1_simulation import CHANNEL_NAMES
 from part1_simulation.config_loader import load_dgp_config
 from part1_simulation.dgp.generate_data import generate_all_journeys
-from part1_simulation.evaluation.ground_truth import compute_ground_truth_intensity
-from part1_simulation.evaluation.metrics import compute_mae
-from part1_simulation.models.shapley import compute_shapley_model_based
+from part1_simulation.experiments._common import (
+    prepare_output_dir,
+    setup_experiment_logging,
+)
 from part1_simulation.models.causal.incremental_shapley import compute_incremental_shapley
+from part1_simulation.models.shapley import compute_shapley_model_based
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +46,7 @@ ALPHA_0_LEVELS = {
 
 def run_experiment_06(output_dir: str = "results/part1") -> pd.DataFrame:
     """Run Experiment 06: Incremental vs Total Shapley at different base rates."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path = prepare_output_dir(output_dir)
 
     all_rows = []
 
@@ -147,6 +143,5 @@ def run_experiment_06(output_dir: str = "results/part1") -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
-    warnings.filterwarnings("ignore")
+    setup_experiment_logging()
     run_experiment_06()

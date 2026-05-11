@@ -39,44 +39,24 @@ Outputs:
     - results/part1/09_revenue_waterfall_top.png
 """
 
-import json
 import logging
-import warnings
-from pathlib import Path
 from typing import Dict, List
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from part1_simulation import AttributionResult
 from part1_simulation.config_loader import load_budget_config
+from part1_simulation.experiments._common import (
+    CATEGORY_COLORS_LEGACY as CATEGORY_COLORS,
+    METHOD_CATEGORIES_LEGACY as METHOD_CATEGORIES,
+    load_journeys_and_gt,
+    prepare_output_dir,
+    reconstruct_credits_from_eval,
+    setup_experiment_logging,
+)
 
 logger = logging.getLogger(__name__)
-
-METHOD_CATEGORIES = {
-    "Last Click": "Rule-based", "First Click": "Rule-based",
-    "Linear": "Rule-based", "Time Decay (7.0d)": "Rule-based",
-    "Position-Based (40%/40%)": "Rule-based",
-    "Markov (order=1)": "Statistical", "Markov (order=2)": "Statistical",
-    "Shapley (model-based)": "Game-theoretic",
-    "LSTM+Attention (attn weights)": "Deep Learning",
-    "LSTM+Attention (LOO)": "Deep Learning",
-    "Transformer (2L/2H)": "Deep Learning",
-    "Incremental Shapley": "Causal",
-    "Survival/Poisson (BackElim)": "Causal",
-    "Survival/Poisson (AICPE)": "Causal",
-    "IPW": "Causal", "Doubly Robust": "Causal", "DML": "Causal",
-    "CAMTA (Causal Attention)": "Causal DL",
-}
-
-CATEGORY_COLORS = {
-    "Rule-based": "#4ECDC4", "Statistical": "#45B7D1",
-    "Game-theoretic": "#96CEB4", "Deep Learning": "#FFEAA7",
-    "Causal": "#DDA0DD", "Causal DL": "#FF6B6B",
-}
 
 
 def compute_baseline_spend_share(journeys: pd.DataFrame, paid_channels: List[str]) -> Dict[str, float]:
@@ -103,26 +83,6 @@ def expected_paid_conversions(
     return float(total_budget * sum(
         allocation.get(ch, 0.0) * eff for ch, eff in efficiency.items()
     ))
-
-
-def reconstruct_credits_from_eval(
-    eval_df: pd.DataFrame,
-    gt_a: Dict[str, float],
-) -> List[AttributionResult]:
-    """credit_k = max(0, gt_a_k + bias_k), normalized."""
-    bias_cols = [c for c in eval_df.columns if c.startswith("bias_")]
-    channels = [c.replace("bias_", "") for c in bias_cols]
-
-    results = []
-    for _, row in eval_df.iterrows():
-        credits = {ch: max(0.0, gt_a.get(ch, 0.0) + row[f"bias_{ch}"]) for ch in channels}
-        total = sum(credits.values()) or 1.0
-        credits = {ch: v / total for ch, v in credits.items()}
-        results.append(AttributionResult(
-            method=row["method"], channel_credits=credits,
-            channel_credits_raw=credits, metadata={},
-        ))
-    return results
 
 
 def derive_method_allocation(
@@ -289,13 +249,9 @@ def run_experiment_09(
     eval_csv: str = "results/part1/01_method_accuracy.csv",
 ) -> pd.DataFrame:
     """Run Experiment 09: deterministic decision-impact analysis."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path = prepare_output_dir(output_dir)
 
-    journeys = pd.read_parquet(f"{data_dir}/journeys.parquet")
-    with open(f"{data_dir}/ground_truth.json") as f:
-        gt = json.load(f)
-    gt_a = gt["ground_truth_A"]["channel_credits"]
+    journeys, gt, gt_a = load_journeys_and_gt(data_dir)
     gt_budget = gt["ground_truth_budget"]
     gt_optimal = gt_budget["optimal_allocation_fraction"]
     efficiency = gt_budget["channel_efficiency"]
@@ -408,6 +364,5 @@ def run_experiment_09(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
-    warnings.filterwarnings("ignore")
+    setup_experiment_logging()
     run_experiment_09()

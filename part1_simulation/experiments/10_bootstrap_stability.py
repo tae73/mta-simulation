@@ -29,32 +29,37 @@ Outputs:
     - results/part1/10_ci_width_heatmap.png
 """
 
-import json
 import logging
 import time
-import warnings
-from pathlib import Path
 from typing import Callable, Dict, List, Tuple
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from part1_simulation import AttributionResult, CHANNEL_NAMES
+from part1_simulation.experiments._common import (
+    CATEGORY_COLORS,
+    METHOD_CATEGORIES,
+    prepare_output_dir,
+    setup_experiment_logging,
+)
 from part1_simulation.models.causal.camta import compute_camta_attribution
 from part1_simulation.models.causal.dml import compute_dml_attribution
 from part1_simulation.models.causal.incremental_shapley import compute_incremental_shapley
 from part1_simulation.models.causal.propensity import (
-    compute_doubly_robust_attribution, compute_ipw_attribution,
+    compute_doubly_robust_attribution,
+    compute_ipw_attribution,
 )
 from part1_simulation.models.causal.survival_attribution import compute_survival_attribution
 from part1_simulation.models.lstm_attention import compute_lstm_attention_attribution
 from part1_simulation.models.markov import compute_markov_attribution
 from part1_simulation.models.rule_based import (
-    compute_first_click, compute_last_click, compute_linear,
-    compute_position_based, compute_time_decay,
+    compute_first_click,
+    compute_last_click,
+    compute_linear,
+    compute_position_based,
+    compute_time_decay,
 )
 from part1_simulation.models.shapley import compute_shapley_model_based
 from part1_simulation.models.transformer import compute_transformer_attribution
@@ -91,28 +96,6 @@ METHOD_REGISTRY: List[Tuple[str, Callable[[pd.DataFrame], AttributionResult], st
 ]
 
 TIER_N = {"light": 100, "medium": 20, "heavy": 5}
-
-METHOD_CATEGORIES = {
-    "Last Click": "Rule-based", "First Click": "Rule-based",
-    "Linear": "Rule-based", "Time Decay (7.0d)": "Rule-based",
-    "Position-Based (40%/40%)": "Rule-based",
-    "Markov (order=1)": "Statistical", "Markov (order=2)": "Statistical",
-    "Shapley (model-based)": "Game-theoretic",
-    "LSTM+Attention (attn weights)": "Deep Learning",
-    "Transformer (2L/2H)": "Deep Learning",
-    "Incremental Shapley": "Causal (incremental)",
-    "Survival/Poisson (AICPE)": "Causal (incremental)",
-    "Survival/Poisson (Shapley)": "Causal (incremental)",
-    "IPW": "Causal (debiased)", "Doubly Robust": "Causal (debiased)", "DML": "Causal (debiased)",
-    "CAMTA (Causal Attention)": "Causal (incremental)",
-}
-
-CATEGORY_COLORS = {
-    "Rule-based": "#4ECDC4", "Statistical": "#45B7D1",
-    "Game-theoretic": "#96CEB4", "Deep Learning": "#FFEAA7",
-    "Causal (debiased)": "#DDA0DD", "Causal (incremental)": "#B5D8B5",
-}
-
 
 def bootstrap_users(
     journeys: pd.DataFrame,
@@ -308,8 +291,7 @@ def run_experiment_10(
     methods_filter: List[str] = None,
 ) -> pd.DataFrame:
     """Run Experiment 10: bootstrap stability."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path = prepare_output_dir(output_dir)
 
     journeys = pd.read_parquet(f"{data_dir}/journeys.parquet")
     logger.info(f"Loaded {journeys['user_id'].nunique()} users")
@@ -357,7 +339,5 @@ def run_experiment_10(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s",
-                        datefmt="%H:%M:%S")
-    warnings.filterwarnings("ignore")
+    setup_experiment_logging(use_timestamp=True)
     run_experiment_10()

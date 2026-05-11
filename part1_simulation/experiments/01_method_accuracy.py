@@ -10,13 +10,8 @@ Compare MAE and Kendall's Tau vs Ground Truth A (intensity decomposition).
 Metrics: MAE, RMSE, Kendall's Tau, Top-3 accuracy per method.
 """
 
-import json
 import logging
-import warnings
-from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -24,50 +19,28 @@ import seaborn as sns
 
 from part1_simulation.config_loader import load_dgp_config
 from part1_simulation.evaluation.evaluate import evaluate_all_methods, print_evaluation_summary
-from part1_simulation.models.rule_based import run_all_rule_based
-from part1_simulation.models.markov import compute_markov_attribution
-from part1_simulation.models.shapley import compute_shapley_model_based
-from part1_simulation.models.lstm_attention import compute_lstm_attention_attribution
-from part1_simulation.models.transformer import compute_transformer_attribution
-from part1_simulation.models.causal.incremental_shapley import compute_incremental_shapley
-from part1_simulation.models.causal.survival_attribution import compute_survival_attribution
-from part1_simulation.models.causal.propensity import compute_ipw_attribution, compute_doubly_robust_attribution
-from part1_simulation.models.causal.dml import compute_dml_attribution
+from part1_simulation.experiments._common import (
+    CATEGORY_COLORS,
+    METHOD_CATEGORIES,
+    load_journeys_and_gt,
+    prepare_output_dir,
+    setup_experiment_logging,
+)
 from part1_simulation.models.causal.camta import compute_camta_attribution
+from part1_simulation.models.causal.dml import compute_dml_attribution
+from part1_simulation.models.causal.incremental_shapley import compute_incremental_shapley
+from part1_simulation.models.causal.propensity import (
+    compute_doubly_robust_attribution,
+    compute_ipw_attribution,
+)
+from part1_simulation.models.causal.survival_attribution import compute_survival_attribution
+from part1_simulation.models.lstm_attention import compute_lstm_attention_attribution
+from part1_simulation.models.markov import compute_markov_attribution
+from part1_simulation.models.rule_based import run_all_rule_based
+from part1_simulation.models.shapley import compute_shapley_model_based
+from part1_simulation.models.transformer import compute_transformer_attribution
 
 logger = logging.getLogger(__name__)
-
-# Method categories for visualization
-METHOD_CATEGORIES = {
-    "Last Click": "Rule-based",
-    "First Click": "Rule-based",
-    "Linear": "Rule-based",
-    "Time Decay (7.0d)": "Rule-based",
-    "Position-Based (40%/40%)": "Rule-based",
-    "Markov (order=1)": "Statistical",
-    "Markov (order=2)": "Statistical",
-    "Shapley (model-based)": "Game-theoretic",
-    "LSTM+Attention (attn weights)": "Deep Learning",
-    "LSTM+Attention (LOO)": "Deep Learning",
-    "Transformer (2L/2H)": "Deep Learning",
-    "Incremental Shapley": "Causal (incremental)",
-    "Survival/Poisson (BackElim)": "Causal (incremental)",
-    "Survival/Poisson (AICPE)": "Causal (incremental)",
-    "Survival/Poisson (Shapley)": "Causal (incremental)",
-    "IPW": "Causal (debiased)",
-    "Doubly Robust": "Causal (debiased)",
-    "DML": "Causal (debiased)",
-    "CAMTA (Causal Attention)": "Causal (incremental)",
-}
-
-CATEGORY_COLORS = {
-    "Rule-based": "#4ECDC4",
-    "Statistical": "#45B7D1",
-    "Game-theoretic": "#96CEB4",
-    "Deep Learning": "#FFEAA7",
-    "Causal (debiased)": "#DDA0DD",
-    "Causal (incremental)": "#B5D8B5",
-}
 
 
 def run_all_methods(journeys, config):
@@ -181,14 +154,10 @@ def run_experiment_01(
     output_dir: str = "results/part1",
 ) -> pd.DataFrame:
     """Run Experiment 01: full method accuracy comparison."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path = prepare_output_dir(output_dir)
 
-    journeys = pd.read_parquet(f"{data_dir}/journeys.parquet")
+    journeys, _gt, gt_a = load_journeys_and_gt(data_dir)
     config = load_dgp_config(overrides=["alpha_0=-5.625"])
-    with open(f"{data_dir}/ground_truth.json") as f:
-        gt = json.load(f)
-    gt_a = gt["ground_truth_A"]["channel_credits"]
 
     results = run_all_methods(journeys, config)
     eval_df = evaluate_all_methods(results, gt_a)
@@ -218,6 +187,5 @@ def run_experiment_01(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
-    warnings.filterwarnings("ignore")
+    setup_experiment_logging()
     run_experiment_01()

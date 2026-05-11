@@ -24,57 +24,36 @@ Outputs:
 
 import json
 import logging
-import warnings
-from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats as scipy_stats
-from scipy.cluster.hierarchy import linkage, leaves_list
+from scipy.cluster.hierarchy import leaves_list, linkage
 
-from part1_simulation import CHANNEL_NAMES
 from part1_simulation.evaluation.metrics import compute_kendall_tau, compute_mae
+from part1_simulation.experiments._common import (
+    METHOD_CATEGORIES,
+    prepare_output_dir,
+    setup_experiment_logging,
+)
 
 logger = logging.getLogger(__name__)
-
-METHOD_CATEGORIES = {
-    "Last Click": "Rule-based", "First Click": "Rule-based",
-    "Linear": "Rule-based", "Time Decay (7.0d)": "Rule-based",
-    "Position-Based (40%/40%)": "Rule-based",
-    "Markov (order=1)": "Statistical", "Markov (order=2)": "Statistical",
-    "Shapley (model-based)": "Game-theoretic",
-    "LSTM+Attention (attn weights)": "Deep Learning",
-    "LSTM+Attention (LOO)": "Deep Learning",
-    "Transformer (2L/2H)": "Deep Learning",
-    "Incremental Shapley": "Causal (incremental)",
-    "Survival/Poisson (BackElim)": "Causal (incremental)",
-    "Survival/Poisson (AICPE)": "Causal (incremental)",
-    "Survival/Poisson (Shapley)": "Causal (incremental)",
-    "IPW": "Causal (debiased)", "Doubly Robust": "Causal (debiased)", "DML": "Causal (debiased)",
-    "CAMTA (Causal Attention)": "Causal (incremental)",
-}
 
 
 def reconstruct_credits(eval_df: pd.DataFrame, gt_a: Dict[str, float]) -> pd.DataFrame:
     """Reconstruct channel credit matrix (method × channel) from bias columns.
 
     credit_k = max(0, gt_a_k + bias_k), then normalize so each row sums to 1.0.
+    Returns DataFrame indexed by method with channel columns in sorted order.
     """
-    bias_cols = [c for c in eval_df.columns if c.startswith("bias_")]
-    channels = [c.replace("bias_", "") for c in bias_cols]
+    from part1_simulation.experiments._common import reconstruct_credits_from_eval
 
-    rows = []
-    for _, row in eval_df.iterrows():
-        credits = {ch: max(0.0, gt_a.get(ch, 0.0) + row[f"bias_{ch}"]) for ch in channels}
-        total = sum(credits.values()) or 1.0
-        credits = {ch: v / total for ch, v in credits.items()}
-        rows.append({"method": row["method"], **credits})
-
-    return pd.DataFrame(rows).set_index("method")[sorted(channels)]
+    attr_results = reconstruct_credits_from_eval(eval_df, gt_a)
+    rows = [{"method": r.method, **r.channel_credits} for r in attr_results]
+    channels = sorted(set(rows[0]) - {"method"}) if rows else []
+    return pd.DataFrame(rows).set_index("method")[channels]
 
 
 def compute_pairwise_tau(credit_matrix: pd.DataFrame) -> pd.DataFrame:
@@ -260,8 +239,7 @@ def run_experiment_11(
     output_dir: str = "results/part1",
 ) -> pd.DataFrame:
     """Run Experiment 11: convergent validity analysis."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path = prepare_output_dir(output_dir)
 
     eval_df = pd.read_csv(eval_csv)
     with open(gt_path) as f:
@@ -337,6 +315,5 @@ def run_experiment_11(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
-    warnings.filterwarnings("ignore")
+    setup_experiment_logging()
     run_experiment_11()
