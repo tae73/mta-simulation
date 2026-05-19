@@ -9,6 +9,17 @@ expected revenue lift, but the relationship is not perfectly monotonic
 because lift weights allocations by channel efficiency. Methods that put
 mass on a high-efficiency channel (e.g., Email) win disproportionately.
 
+CAVEAT (interpretation, not a bug): ``revenue_lift_pct`` and
+``allocation_mae`` are BOTH deterministic functions of the same
+``derive_method_allocation`` output (credit/cost share). Their reported
+correlation is therefore partly definitional/mechanical — it quantifies how
+allocation error translates into the efficiency-weighted revenue objective,
+NOT an independent empirical validation. The non-mechanical content is the
+*shape* of that translation (efficiency weighting, the GT-optimal vs pure-LP
+ceiling gap), not the existence of correlation itself. Treat the scatter as
+"how much does allocation error cost in revenue units", not as evidence that
+allocation MAE predicts an out-of-sample outcome.
+
 Setup (deterministic — closed-form Approach A):
     Under Linear Response (Approach A), expected paid conversions equal
         Σ_k spend_k × efficiency_k

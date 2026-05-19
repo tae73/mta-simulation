@@ -809,3 +809,79 @@ def test_user_features_default_backward_compat():
             r1.channel_credits[ch], r3.channel_credits[ch], atol=1e-9,
             err_msg=f"default vs list differ on {ch}",
         )
+
+
+# ============================================================
+# Path-level incrementality — compute_path_incrementality
+# ============================================================
+
+from part1_simulation.models.causal.survival_attribution import (  # noqa: E402
+    _shapley_credits,
+    _user_feature_values,
+    compute_path_incrementality,
+)
+
+
+def test_path_incrementality_telescoping_matches_be_raw_unclamped():
+    """Σ_u Δ_path (converters) == Σ_u [λ̂(full)−λ̂(∅)] computed directly.
+
+    By the telescoping invariant this equals the §4 backwards-elimination
+    raw (unclamped) total — the helper must reproduce that game value.
+    """
+    j = _make_journeys([
+        (1, "New",   ["Display", "Email", "Paid Search"], [5.0, 10.0, 20.0], True),
+        (2, "Loyal", ["Paid Search", "Email"],            [3.0, 8.0],        True),
+        (3, "New",   ["Display"],                         [2.0],             False),
+        (4, "Loyal", ["Email", "Display"],                [4.0, 9.0],        True),
+    ])
+    idf, cols, meta = _build_interval_features(j, observation_end=50.0)
+    model = _fit_poisson_model(idf, cols)
+
+    df = compute_path_incrementality(model, j, meta, cols, subpopulation="converters")
+
+    # Direct per-converted-user λ̂(full) − λ̂(∅)
+    params = model.params
+    expected = 0.0
+    for _, g in j[j["converted"]].groupby("user_id", sort=False):
+        g = g.sort_values("touchpoint_idx").reset_index(drop=True)
+        n = len(g)
+        chs = g["channel"].values
+        ts = g["timestamp"].values.astype(float)
+        t_star = float(ts.max())
+        ufv = _user_feature_values(g.iloc[0], meta["levels_per_feature"])
+        lam_full = _predict_intensity_at(params, t_star, list(range(n)), chs, ts, ufv, cols, meta)
+        lam_empty = _predict_intensity_at(params, t_star, [], chs, ts, ufv, cols, meta)
+        expected += (lam_full - lam_empty)
+
+    np.testing.assert_allclose(df["delta"].sum(), expected, atol=1e-9)
+    # converters subpopulation excludes the non-converter (user 3)
+    assert set(df["user_id"]) == {1, 2, 4}
+
+
+def test_path_incrementality_efficiency_axiom_vs_shapley():
+    """Marginal: Σ_u Δ_path == (Σ_c φ_c^Gcomp) × n_users (efficiency axiom).
+
+    _shapley_credits returns the mean coalition-marginal over users, so its
+    sum is v(N)−v(∅) = E_u[λ̂(full)−λ̂(∅)]; scaling by n_users recovers the
+    path-Δ total. Directly exercises the subpopulation="all" branch.
+    """
+    j = _make_journeys([
+        (1, "New",         ["Display", "Email"],        [5.0, 10.0], True),
+        (2, "Loyal",       ["Paid Search", "Display"],  [3.0, 8.0],  True),
+        (3, "New",         ["Email"],                   [2.0],       False),
+        (4, "Loyal",       ["Display"],                 [4.0],       False),
+        (5, "Exploratory", ["Email", "Paid Search"],    [1.0, 6.0],  True),
+    ])
+    idf, cols, meta = _build_interval_features(j, observation_end=50.0)
+    model = _fit_poisson_model(idf, cols)
+
+    df_all = compute_path_incrementality(model, j, meta, cols, subpopulation="all")
+    n_users = j["user_id"].nunique()
+    assert len(df_all) == n_users  # ALL users, converters + non-converters
+
+    sh = _shapley_credits(model, j, meta, subpopulation="all")
+    sigma_delta = df_all["delta"].sum()
+    sigma_phi_scaled = sum(sh.values()) * n_users
+
+    rel_err = abs(sigma_delta - sigma_phi_scaled) / max(abs(sigma_delta), 1e-12)
+    assert rel_err < 1e-3, f"efficiency axiom rel_err={rel_err:.2e}"

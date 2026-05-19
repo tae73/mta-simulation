@@ -46,11 +46,20 @@ def _backwards_elimination_credits(
     meta: Dict[str, Any],
     *,
     query_events: Optional[pd.DataFrame] = None,
+    subpopulation: str = "converters",
 ) -> Dict[str, float]:
     """Eq 13: RawCredit(j) = λ̂(t*, A(j)) - λ̂(t*, A(j-1)).
 
-    Sum over converted users. Telescoping ensures Σⱼ RawCredit(j) = λ̂(A(n)) - λ̂(∅).
+    Telescoping ensures Σⱼ RawCredit(j) = λ̂(A(n)) - λ̂(∅) per user.
+
+    ``subpopulation``: ``"converters"`` (default, paper-faithful — Shender 4.2.1)
+    sums over converted users only. ``"all"`` aggregates over ALL users for
+    G-computation marginal estimand (population-marginal channel effect). See
+    Methodology 05 §3.5 and notebook 02 (Main) §10.
     """
+    if subpopulation not in ("converters", "all"):
+        raise ValueError(f"subpopulation must be 'converters' or 'all', got {subpopulation!r}")
+
     params = model.params
     feature_cols = meta["feature_cols"]
     levels_per_feature = meta["levels_per_feature"]
@@ -65,7 +74,10 @@ def _backwards_elimination_credits(
     else:
         query_by_user = {}
 
-    for user_id, group in journeys[journeys["converted"]].groupby("user_id", sort=False):
+    user_iter_source = (
+        journeys[journeys["converted"]] if subpopulation == "converters" else journeys
+    )
+    for user_id, group in user_iter_source.groupby("user_id", sort=False):
         group = group.sort_values("touchpoint_idx").reset_index(drop=True)
         n = len(group)
         ts = group["timestamp"].values.astype(float)
@@ -156,15 +168,21 @@ def _shapley_credits(
     model: _GLMResult,
     journeys: pd.DataFrame,
     meta: Dict[str, Any],
+    *,
+    subpopulation: str = "converters",
 ) -> Dict[str, float]:
     """Eq 25: Shapley credit on Survival/Poisson backbone (Section 4.2.3).
 
-    Coalition value v(S) = E_user[λ̂(t*, A_user ∩ S)] over converted users.
-    Enumerate 2^7 = 128 coalitions, exact Shapley formula.
+    Coalition value v(S) = E_user[λ̂(t*, A_user ∩ S)] over the chosen
+    subpopulation. Enumerate 2^7 = 128 coalitions, exact Shapley formula.
 
     By Shapley constant-invariance, this is equivalent to using
     v'(S) = λ̂(S) - λ̂(∅) (Du-style incremental value function).
-    Total credit distributed = λ̂(N) - λ̂(∅) per user, averaged.
+
+    ``subpopulation``: ``"converters"`` (default, paper-faithful — Shender 4.2.3)
+    averages v(S) over converted users. ``"all"`` averages over ALL users for
+    G-computation marginal estimand (population-marginal channel effect). See
+    Methodology 05 §3.5 and notebook 02 (Main) §10.
 
     NOTE: This unifies Shender (intensity backbone) with Du
     (Shapley credit allocation). See Methodology_05 for derivation.
@@ -172,16 +190,19 @@ def _shapley_credits(
     import itertools
     import math
 
+    if subpopulation not in ("converters", "all"):
+        raise ValueError(f"subpopulation must be 'converters' or 'all', got {subpopulation!r}")
+
     params = model.params
     feature_cols = meta["feature_cols"]
     levels_per_feature = meta["levels_per_feature"]
     channels = list(CHANNEL_NAMES)
     n = len(channels)
 
-    # Pre-compute per-user metadata for converted users
-    converted = journeys[journeys["converted"]]
+    # Pre-compute per-user metadata for chosen subpopulation
+    user_source = journeys[journeys["converted"]] if subpopulation == "converters" else journeys
     user_data: List[Tuple[Any, np.ndarray, np.ndarray, Dict[str, float], float]] = []
-    for user_id, group in converted.groupby("user_id", sort=False):
+    for user_id, group in user_source.groupby("user_id", sort=False):
         group = group.sort_values("touchpoint_idx").reset_index(drop=True)
         ts = group["timestamp"].values.astype(float)
         chs = group["channel"].values

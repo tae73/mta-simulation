@@ -17,7 +17,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from part1_simulation.config_loader import load_dgp_config
 from part1_simulation.evaluation.evaluate import evaluate_all_methods, print_evaluation_summary
 from part1_simulation.experiments._common import (
     CATEGORY_COLORS,
@@ -43,8 +42,13 @@ from part1_simulation.models.transformer import compute_transformer_attribution
 logger = logging.getLogger(__name__)
 
 
-def run_all_methods(journeys, config):
-    """Run all attribution methods and collect results."""
+def run_all_methods(journeys):
+    """Run all attribution methods and collect results.
+
+    Result depends only on ``journeys`` (pre-generated under the calibrated
+    DGP). The former ``config`` parameter was dead — every method call below
+    uses ``journeys`` alone — so it was removed; output is unchanged.
+    """
     results = []
 
     logger.info("Running Rule-based (5 methods)...")
@@ -157,9 +161,8 @@ def run_experiment_01(
     output_path = prepare_output_dir(output_dir)
 
     journeys, _gt, gt_a = load_journeys_and_gt(data_dir)
-    config = load_dgp_config(overrides=["alpha_0=-5.625"])
 
-    results = run_all_methods(journeys, config)
+    results = run_all_methods(journeys)
     eval_df = evaluate_all_methods(results, gt_a)
 
     # Save
