@@ -3,7 +3,7 @@
 
 # One survival model for channel credit, budget, and journey design — at once
 
-### Causal multi-touch attribution: Incremental·Shapley credit and a path-level decomposition, unified on a Poisson Survival backbone
+### Causal multi-touch attribution: Incremental·Shapley credit and a path-level decomposition, unified on a single Inhomogeneous Poisson Process
 
 <p align="center">
   <img src="https://img.shields.io/badge/Best_MAE-0.016-2ca58d" alt="Best MAE 0.016">
@@ -14,24 +14,25 @@
 </p>
 
 > **In one line.** To answer *"would this conversion have happened without the ad?"*, I model the marketing
-> journey as **time-to-event (survival) data** with a single Poisson GLM — and stack **Incremental·Shapley
-> channel credit** and a **path-level (per-journey) decomposition** on top. Against *simulation ground truth*,
-> it attains the **lowest channel-credit error of 18 methods (MAE 0.016)**, while the *same fitted model*
-> answers **channel budget · journey design · forward causal decisions** under a *single efficiency identity*.
+> journey as **time-to-event (survival) data** with a single **Inhomogeneous Poisson Process (IPP)** — and stack
+> **Incremental·Shapley channel credit** and a **path-level (per-journey) decomposition** on top. Against
+> *simulation ground truth*, it attains the **lowest channel-credit error of 18 methods (MAE 0.016)**, while the
+> *same fitted model* answers **channel budget · journey design · forward causal decisions** under a *single
+> efficiency identity*.
 
 ---
 
 ## ⏱️ 30-second summary (TL;DR)
 
 <p align="center">
-  <img src="../assets/method_stack_en.svg" alt="A credit layer and a path layer on a single Poisson GLM, unifying channel budget, journey design, and population effect under one efficiency identity" width="820">
-  <br><sub><b>Figure 1.</b> A credit layer and a path layer sit on a single fitted Poisson GLM (backbone),
+  <img src="../assets/method_stack_en.svg" alt="A credit layer and a path layer on a single Inhomogeneous Poisson Process, unifying channel budget, journey design, and population effect under one efficiency identity" width="820">
+  <br><sub><b>Figure 1.</b> A credit layer and a path layer sit on a single <b>Inhomogeneous Poisson Process</b> (backbone),
   unifying channel budget · journey design · population effect under <b>one efficiency identity (0.00% rel. error)</b> — the core thesis of this work.</sub>
 </p>
 
-- **What it is** — a causal MTA that fuses Shender et al. (2023)'s survival backbone with Du et al. (2019)'s
-  Incremental Shapley into a *single fitted GLM*, then adds **path-level Incremental Shapley** (per-journey
-  decomposition) and **Conditional vs Marginal G-computation** (two estimands).
+- **What it is** — a causal MTA that fuses Shender et al. (2023)'s survival backbone (an **Inhomogeneous Poisson
+  Process**) with Du et al. (2019)'s Incremental Shapley into a *single fitted model*, then adds **path-level
+  Incremental Shapley** (per-journey decomposition) and **Conditional vs Marginal G-computation** (two estimands).
 - **Why it matters** — classic MTA answers *correlation* (Last Click, Shapley). This answers *causation*
   ("what if the ad were absent?") yet needs **no A/B test** — it separates channel effect, temporal decay,
   synergy, and incremental lift from **observational data alone**.
@@ -64,42 +65,56 @@ how to shift next quarter's budget. The usual attribution carries four limitatio
 
 ## 2. Method — why this three-layer design
 
-The spine of this project is **three layers stacked on a single fitted Poisson GLM**. The key idea: fit the
-model *once*, then derive channel credit, journey decomposition, and population effect as **the same game**.
-The full structure is **Figure 1** above (the three-layer stack + the efficiency identity).
+The spine of this project is **three layers stacked on a single fitted Inhomogeneous Poisson Process (IPP)**. The
+key idea: fit the model *once*, then derive channel credit, journey decomposition, and population effect as **the
+same game**. The full structure is **Figure 1** above (the three-layer stack + the efficiency identity).
 
-### 2.1 Backbone — why Poisson Survival
+### 2.1 Backbone — why an Inhomogeneous Poisson Process
 
 A marketing journey is inherently **time-to-event data**. A touch's influence decays over time, observation
 windows differ per user ("no conversion within 8h" ≠ "zero effect"), and conversions are rare (2.3%). A
 snapshot logistic regression throws that structure away.
 
-- **Model**: an **interval-split Poisson GLM** that slices each touchpoint into time intervals.
+- **Model class = Inhomogeneous Poisson Process**: conversions are modeled as a Poisson process whose
+  *intensity* $\lambda(t)$ *varies over time*.
 
   $$\log \lambda_i(t) \;=\; \alpha_0 \;+\; \sum_{j}\sum_{k} \beta_k \cdot x_{jk}\cdot f_{\text{channel}}(t-t_j)$$
 
-  Each (touchpoint × interval) is one Poisson observation with **offset = log(Δt)**. Right-censoring is
-  handled natively.
+- **Estimation**: slice each touchpoint into time intervals and fit an **interval-split Poisson GLM**
+  (offset = log Δt) — *the GLM is the estimation mechanism*, not the model-class name. Right-censoring is handled natively.
 - **Let the data speak**: it *learns* a 5-bin decay curve per channel — Paid Search cools within ~1 day,
-  Display lingers to ~14 days. No assumed lookback window.
+  Display lingers to ~14 days (Figure 2). No assumed lookback window.
 - **No peeking at ground truth**: spec chosen by **AIC** (`+Position`, ΔAIC −435 vs baseline), fit checked by
   Deviance/df, predictive power by hold-out — the model is selected *without* ground truth (key to deployment).
-- **Why a backbone**: a single GLM is fit, so every downstream credit / path / population decomposition is
+- **Why a backbone**: a single IPP is fit, so every downstream credit / path / population decomposition is
   *just a different query of the same model*.
+
+<p align="center">
+  <img src="../results/part1/02_decay_curves.png" alt="Per-channel decay curves learned by the IPP — Paid Search decays fast, Display slow" width="720">
+  <br><sub><b>Figure 2.</b> The per-channel decay (β, log-intensity contribution) the IPP <i>learns</i> from data. Paid Search peaks at 0–1 day then drops
+  (effective lifetime ~1 day); Display persists out to two weeks — time structure estimated directly, no lookback window assumed. <i>(Axis labels in Korean; channel/legend in English.)</i></sub>
+</p>
 
 ### 2.2 Channel credit — why stack Incremental·Shapley on the backbone
 
 A fitted intensity $\hat\lambda$ is not yet "channel credit." To decompose it per channel, I define **two
-credit operators on the same GLM**.
+credit operators on the same IPP**.
 
 | Operator | Definition | Property | Use |
 |---|---|---|---|
 | **BackElim** | Remove ads *last → first*, crediting each ad with the resulting drop in $\hat\lambda$ | order-dependent · the per-channel drops sum exactly to $\hat\lambda(\text{full})-\hat\lambda(\varnothing)$ (no remainder) | bidding (last-touch concentration) |
 | **Shapley** | Average marginal contribution over 128 coalitions | order-free · coalition-fair · efficiency axiom (§2.3) | budget allocation |
 
-The two operators agree on channel ranking at **Spearman ρ = 0.929** — high agreement is a reportable, robust
-signal, while large divergence is a diagnostic signal that the channel is synergy-heavy. (Derivations:
+The two operators agree on channel ranking at **Spearman ρ = 0.929** (Figure 3) — high agreement is a reportable,
+robust signal, while large divergence is a diagnostic signal that the channel is synergy-heavy. E.g. Paid Search
+is BackElim 0.45 vs Shapley 0.32 — **BackElim concentrates the credit on the last touch (Paid Search)** while
+**Shapley spreads it across coalitions**. (Derivations:
 [`Methodology_05`](../docs/Methodology_05_Causal_Attribution_Frameworks.md) Eq. 13·25.)
+
+<p align="center">
+  <img src="../results/part1/02_channel_credit.png" alt="BackElim vs Shapley channel credit, Spearman ρ=0.929" width="700">
+  <br><sub><b>Figure 3.</b> Two credit operators (BackElim·Shapley) on the same IPP. Ranking agreement ρ=0.929 — a robust signal.</sub>
+</p>
 
 **Why "incremental" (vs Total Shapley).** Total Shapley credits the baseline conversion too (what would have
 happened with no ads at all). It therefore over-values lower-funnel channels (Paid Search, Email) that ride
@@ -112,7 +127,7 @@ baseline to isolate **only the ad-driven lift**.
 The channel view (§2.2) answers "which channel to fund." But marketers also ask "**which N-step journeys
 generate the most incremental conversions**" — a **campaign / journey-design** question, not a budget one.
 
-- **Same GLM, different aggregation**: sum $\Delta_{\text{path}} = \hat\lambda(\text{path}) -
+- **Same IPP, different aggregation**: sum $\Delta_{\text{path}} = \hat\lambda(\text{path}) -
   \hat\lambda(\varnothing)$ at the *journey-template (ordered channel tuple)* level instead of by channel.
 - **The efficiency identity unifies three views** — verified at **0.00% relative error**:
 
@@ -121,9 +136,15 @@ generate the most incremental conversions**" — a **campaign / journey-design**
   i.e. channel budget, journey design, and population causal effect are *not separate analyses but three
   aggregations of the same game*.
 - **Keep only what's reproducible**: of 1,786 unique templates, ~98% are one-person flukes (count=1, long
-  unique journeys). A `count ≥ 5` filter keeps **35 robust templates** (covering 15.5% of converters) — mostly
-  **short, frequent 2-step journeys** (median length 2) — as campaign candidates; without it, a single user's
-  coincidental long path tops the mean-Δ list and is unactionable.
+  unique journeys). A `count ≥ 5` filter keeps **35 robust templates** (covering 15.5% of converters) as
+  campaign candidates (Figure 4).
+
+<p align="center">
+  <img src="../results/part1/02_path_topk.png" alt="35 robust journey templates — Total Contribution vs Mean Δ Top-K" width="900">
+  <br><sub><b>Figure 4.</b> The 35 robust journeys ranked by path-level Incremental Shapley. <b>Left (Total Contribution)</b>:
+  frequent, high-total journeys — short 2-step paths like Email→Paid Search (n=37) and Direct→Paid Search (n=24).
+  <b>Right (Mean Δ)</b>: rare but high-impact-per-occurrence 3-step journeys. Color = journey length (# touchpoints).</sub>
+</p>
 
 ### 2.4 Conditional vs Marginal — why two estimands
 
@@ -131,7 +152,7 @@ The same Shapley credit yields two causal quantities depending on **who you aggr
 
 <p align="center">
   <img src="../assets/conditional_marginal_en.svg" alt="Confounding / collider structure and how Conditional / Marginal estimands map to decisions" width="820">
-  <br><sub><b>Figure 2.</b> Aggregating conditional on conversion (converters-only) opens collider bias. Past accounting → Conditional, future budget → Marginal.</sub>
+  <br><sub><b>Figure 5.</b> Aggregating conditional on conversion (converters-only) opens collider bias. Past accounting → Conditional, future budget → Marginal.</sub>
 </p>
 
 | Estimand | Aggregated over | Question it answers | GT match |
@@ -160,7 +181,7 @@ I evaluated 18 methods against ground truth (the known DGP parameters). The main
 
 <p align="center">
   <img src="../results/part1/01_mae_vs_tau.png" alt="Accuracy (MAE) × ranking agreement (Kendall τ) landscape across 18 methods" width="720">
-  <br><sub><b>Figure 3.</b> Ground-truth error (MAE, ↓ better) vs ranking agreement (Kendall τ, ↑ better).
+  <br><sub><b>Figure 6.</b> Ground-truth error (MAE, ↓ better) vs ranking agreement (Kendall τ, ↑ better).
   Causal / incremental methods (top-left) separate cleanly from heuristic / predict-only ones (bottom-right, negative τ).</sub>
 </p>
 
@@ -187,7 +208,7 @@ I evaluated 18 methods against ground truth (the known DGP parameters). The main
    accuracy + stability + allocation, not on any single axis. (CAMTA, at MAE 0.023 / CV 0.10, is a close rival.)
 2. **Causal ≠ automatic win.** Debiased estimators (**DML 0.050, IPW 0.074**) **do not beat the best rule-based
    method (Last Click 0.038)** under this DGP — confounding is moderate, so heavy debiasing yields no gain. The
-   edge comes from *survival + incremental modeling itself*, not propensity correction. (Experiment 05)
+   edge comes from *the IPP + incremental modeling itself*, not propensity correction. (Experiment 05)
 3. **Total Shapley = a fragile winner.** Its channel MAE (0.035) looks fine, but allocation MAE 0.117 and a
    mean CV of 0.99 (nearly the worst) make it unstable — a risk hidden if you look at accuracy alone.
 4. **The best rule-based is surprisingly competitive.** Last Click's MAE (0.038) isn't bad. The real advantage
@@ -196,7 +217,7 @@ I evaluated 18 methods against ground truth (the known DGP parameters). The main
 
 <p align="center">
   <img src="../results/part1/06_incremental_vs_total.png" alt="As base rate rises, Total Shapley collapses to zero for upper-funnel channels while Incremental stays stable" width="620">
-  <br><sub><b>Figure 4.</b> As the base rate rises, Total Shapley collapses to zero for Display·Social while Incremental stays stable.
+  <br><sub><b>Figure 7.</b> As the base rate rises, Total Shapley collapses to zero for Display·Social while Incremental stays stable.
   Per-method stability (mean CV) figures are in the table above (<a href="../results/part1/10_bootstrap_stability.csv">10_bootstrap_stability.csv</a>).</sub>
 </p>
 
@@ -204,11 +225,11 @@ I evaluated 18 methods against ground truth (the known DGP parameters). The main
 
 ## 4. How it's used in practice
 
-The method's outputs map directly onto *four decisions*. The point: **one fitted model answers all four.**
+The method's outputs map directly onto *four decisions*. The point: **one fitted IPP answers all four.**
 
 <p align="center">
   <img src="../assets/industry_decision_map_en.svg" alt="Attribution outputs → budget reallocation · journey design · decision rule · uncertainty" width="860">
-  <br><sub><b>Figure 5.</b> The same GLM's outputs branch into budget, journey, forward decisions, and uncertainty.</sub>
+  <br><sub><b>Figure 8.</b> The same IPP's outputs branch into budget, journey, forward decisions, and uncertainty.</sub>
 </p>
 
 ### 4.1 Budget reallocation — "Effect ≠ Efficiency"
@@ -227,7 +248,7 @@ once combined with the cost structure.
 
 <p align="center">
   <img src="../results/part1/07_budget_allocation.png" alt="Per-method budget allocation vs ground-truth optimum — Effect ≠ Efficiency" width="720">
-  <br><sub><b>Figure 6.</b> Paid Search ranks #1 on effect but, with an expensive CPC, its optimal budget is 0.09%;
+  <br><sub><b>Figure 9.</b> Paid Search ranks #1 on effect but, with an expensive CPC, its optimal budget is 0.09%;
   the true value driver is Email (73.7%). Incremental Shapley and Survival/Poisson Shapley land closest to the GT optimum.</sub>
 </p>
 
@@ -237,10 +258,10 @@ once combined with the cost structure.
 
 ### 4.2 Campaign · journey design — 35 reproducible templates
 
-Path-level Incremental Shapley (§2.3) ranks *which journey patterns produce incremental conversions*. The 35
-robust templates (`count ≥ 5`, mostly short, frequent 2-step journeys) are the journeys "working now" — a
-priority list to amplify. Because channel budget and journey design satisfy the **same efficiency identity**,
-the two decisions never contradict.
+Path-level Incremental Shapley (§2.3, Figure 4) ranks *which journey patterns produce incremental conversions*.
+The 35 robust templates (`count ≥ 5`, mostly short, frequent 2-step paths like Email→Paid Search and
+Direct→Paid Search) are the journeys "working now" — a priority list to amplify. Because channel budget and
+journey design satisfy the **same efficiency identity**, the two decisions never contradict.
 
 ### 4.3 Decision rule — Conditional for the past, Marginal for the future
 
@@ -259,8 +280,14 @@ Marginal. → 1-page practitioner guide: [`docs/Marketing_Handout_Conditional_vs
 - **Reporting-confidence gate**: classify channels by bootstrap 90% CI width — narrow → reportable, wide
   (includes 0) → frame conservatively.
 - **Works without GT**: real data has no ground truth. This method self-validates via AIC (spec selection),
-  OOS AUC (predictive sanity), and internal consistency (BackElim↔Shapley ρ, the efficiency identity) — OOS
-  AUC ~0.64 serves as a reasonableness gate.
+  OOS AUC (predictive sanity), and internal consistency (BackElim↔Shapley ρ, the efficiency identity).
+
+<p align="center">
+  <img src="../results/part1/02_roc.png" alt="Main method out-of-sample holdout ROC, AUC 0.671" width="460">
+  <br><sub><b>Figure 10.</b> The main method's OOS holdout ROC — <b>AUC 0.671</b> (80/20 user split, notebook §6). In Experiment 08,
+  which benchmarks all 18 methods through one harness, OOS AUC clusters around ~0.64 (the values differ because the evaluation
+  setup differs). Either way it serves as a *reasonableness gate* — "predictive power hasn't collapsed" — not a proof of causal validity.</sub>
+</p>
 
 ---
 
@@ -273,8 +300,8 @@ Marginal. → 1-page practitioner guide: [`docs/Marketing_Handout_Conditional_vs
   Methodology_06, Time Decay is #1 by MAE there). No method wins on every DGP — there's a "home advantage."
 - **Multivariate heterogeneity recovery is weak.** Adding segment+device improves MAE only at the noise floor
   → a **propensity-weighted survival model (DR/DML hybrid, Tier 2)** is future work.
-- **Predictive power is modest.** OOS AUC clusters around ~0.64 across methods — predictive validation is used
-  only as a *rejection* gate (too low ⇒ untrustworthy), not as a method-*discriminator*.
+- **Predictive power is modest.** OOS AUC clusters around ~0.64 across methods (Experiment 08, cross-method) —
+  predictive validation is used only as a *rejection* gate (too low ⇒ untrustworthy), not as a method-*discriminator*.
 - **It's a simulation.** The price of ground truth is synthetic data. The next step is **scale validation on
   Criteo (16.5M events)** (Part 2).
 
@@ -291,7 +318,7 @@ python part1_simulation/dgp/generate_data.py \
     --n-users 100000 --config configs/dgp/default.yaml \
     --output-dir data/simulation
 
-# 2) run the main causal method (Survival/Poisson + Incremental Shapley + multi-path)
+# 2) run the main causal method (IPP/Survival + Incremental Shapley + multi-path)
 python part1_simulation/models/causal/run_all.py \
     --data-dir data/simulation --output-dir results/part1/causal
 
@@ -315,7 +342,7 @@ part1_simulation/
 │   ├── rule_based.py · markov.py · shapley.py        # benchmarks (baseline)
 │   ├── lstm_attention.py · transformer.py            # deep-learning benchmarks
 │   └── causal/
-│       ├── survival_attribution.py   # ★ Poisson Survival backbone (interval GLM)
+│       ├── survival_attribution.py   # ★ Inhomogeneous Poisson Process backbone (interval-Poisson GLM)
 │       ├── _survival_credits.py      # ★ BackElim · Shapley · AICPE credit
 │       ├── _survival_paths.py        # ★ path-level Incremental Shapley (multi-path)
 │       ├── incremental_shapley.py    # Du (2019) Incremental Shapley
@@ -362,7 +389,7 @@ part1_simulation/
 | 10 | Bootstrap stability | Markov·Survival stable, model-based Shapley fragile | [`10_bootstrap_stability.csv`](../results/part1/10_bootstrap_stability.csv) |
 | 11 | Convergent validity (GT-free) | a single best method beats the consensus | [`11_convergent_validity.csv`](../results/part1/11_convergent_validity.csv) |
 
-Each experiment's data (CSV) is under [`results/part1/`](../results/part1/); key figures are embedded above (Figures 3·4·6).
+Each experiment's data (CSV) is under [`results/part1/`](../results/part1/); key figures are embedded above (Figures 1–10).
 
 </details>
 
@@ -370,4 +397,5 @@ Each experiment's data (CSV) is under [`results/part1/`](../results/part1/); key
 
 <sub>This document uses only the canonical figures from <b>committed artifacts (`results/part1/*.csv`, `ground_truth.json`)</b>,
 and reports failures / weak results as they are (First Click·Transformer negative τ, debiased non-superiority,
-Total Shapley fragility, Markov-DGP collapse). · <a href="README.md">한국어 버전 →</a></sub>
+Total Shapley fragility, Markov-DGP collapse). Some in-text figures (e.g. Figure 2, decay curves) are original
+notebook-02 outputs and retain Korean axis labels. · <a href="README.md">한국어 버전 →</a></sub>

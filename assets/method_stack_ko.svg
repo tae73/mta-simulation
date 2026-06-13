@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" font-family="'Segoe UI',Helvetica,Arial,sans-serif">
   <rect x="1" y="1" width="858" height="518" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
-  <text x="430" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#1f2a44">하나의 fitted GLM &#8594; 세 가지 의사결정 관점</text>
+  <text x="430" y="40" text-anchor="middle" font-size="20" font-weight="700" fill="#1f2a44">단일 Inhomogeneous Poisson Process &#8594; 세 가지 의사결정 관점</text>
 
   <!-- crown: efficiency identity -->
   <rect x="118" y="66" width="624" height="48" rx="10" fill="#eef0fb" stroke="#4c5bd4" stroke-width="1.6"/>
@@ -53,6 +53,6 @@
 
   <!-- backbone box (layer 1) -->
   <rect x="110" y="418" width="640" height="66" rx="10" fill="#3a4a7a" stroke="#28365c" stroke-width="1.5"/>
-  <text x="430" y="446" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">&#9312;  Poisson Survival 백본 — 단일 fitted GLM</text>
-  <text x="430" y="467" text-anchor="middle" font-size="12.5" fill="#cdd6ee">채널별 감쇠 곡선 학습 · 우측 절단(censoring) 처리 · AIC로 ground truth 없이 스펙 선택</text>
+  <text x="430" y="446" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">&#9312;  Inhomogeneous Poisson Process (IPP) 백본</text>
+  <text x="430" y="467" text-anchor="middle" font-size="12.5" fill="#cdd6ee">시간변화 intensity &#955;(t) · interval-Poisson GLM 로 적합 · 우측 절단 처리</text>
 </svg>

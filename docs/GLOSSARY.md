@@ -7,7 +7,8 @@
 
 | 한국어 | English | 정의 / Definition |
 |---|---|---|
-| Poisson Survival 백본 | Poisson Survival backbone | 터치포인트를 시간 구간으로 쪼갠 interval-split Poisson GLM. 전환 intensity $\lambda(t)$를 모델링하며 우측 절단을 자연 처리. The interval-split Poisson GLM modeling conversion intensity $\lambda(t)$; handles right-censoring natively. |
+| Inhomogeneous Poisson Process (IPP) | Inhomogeneous Poisson Process (IPP) | 시간에 따라 변하는 intensity $\lambda(t)$를 갖는 Poisson process — 본 방법론의 **백본 모델 클래스**(Shender 2023). A Poisson process whose intensity $\lambda(t)$ varies over time — the backbone **model class**. |
+| Poisson Survival 백본 (= IPP) | Poisson Survival backbone (= IPP) | IPP를 **interval-split Poisson GLM**(offset = log Δt)으로 적합한 것. 'GLM'은 *추정 기법*이지 모델 클래스 이름이 아님; 우측 절단 자연 처리. Fitting the IPP via an interval-split Poisson GLM; the 'GLM' is the *estimator*, not the model-class name; handles right-censoring natively. |
 | 단일 fitted GLM | single fitted GLM | 한 번만 적합한 GLM. 이후 모든 credit·path·population 분해가 같은 모델의 질의. One GLM fit once; all downstream decompositions are queries of it. |
 | 채널 기여도 | channel credit | 적합된 intensity를 채널별로 분해한 값 $\phi_c$. Per-channel decomposition $\phi_c$ of the fitted intensity. |
 | BackElim (Backwards Elimination) | BackElim | 광고를 나중→처음 순서로 제거하며 $\hat\lambda$ 하락분을 크레딧으로(순서 의존, Eq. 13). Remove ads last→first, credit the $\hat\lambda$ drop (order-dependent, Eq. 13). |
