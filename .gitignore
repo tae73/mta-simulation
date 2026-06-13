@@ -1,0 +1,23 @@
+# ── Project-internal (excluded from publication) ──
+CLAUDE.md
+PLAN.md
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Notebooks ──
+.ipynb_checkpoints/
+
+# ── OS / IDE / tooling ──
+.DS_Store
+.idea/
+.claude/
+
+# ── Generated simulation data (regenerable; not for publication) ──
+# ground_truth.json is snapshotted into results/part1/ for reproducibility.
+data/

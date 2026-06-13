@@ -54,6 +54,9 @@ from part1_simulation.models.causal._survival_glm import (
     _fit_poisson_model,
     _predict_intensity_at,
 )
+from part1_simulation.models.causal._survival_paths import (
+    compute_path_incrementality,
+)
 
 # Backward-compat re-exports — tests import these directly from this module.
 __all__ = [
@@ -61,8 +64,10 @@ __all__ = [
     "compute_survival_attribution",
     "compute_backwards_elimination_attribution",
     "compute_aicpe_attribution",
+    "compute_survival_gcomp_attribution",
     "compute_survival_propensity_attribution",
     "compute_synergy_report",
+    "compute_path_incrementality",
     # Internal helpers re-exported for test access:
     "_build_interval_features",
     "_user_feature_values",
@@ -98,6 +103,7 @@ def compute_survival_attribution(
     cross_channel_window_hours: float = 24.0,
     normalize: Literal["sum_to_one", "eq17", "eq18"] = "sum_to_one",
     user_features: Tuple[str, ...] = ("segment",),
+    subpopulation: Literal["converters", "all"] = "converters",
 ) -> AttributionResult:
     """Survival/Poisson attribution — Shender et al. 2023 TEDDA.
 
@@ -124,6 +130,14 @@ def compute_survival_attribution(
             Default is ``("segment",)`` (backward-compat). Pass any subset of
             user-level columns (e.g. ``("segment", "device", "country")``);
             each becomes one-hot dummies (reference = first sorted level).
+        subpopulation: ``"converters"`` (default, paper-faithful — Shender 4.2)
+            aggregates credits over converted users only (conditional estimand).
+            ``"all"`` aggregates over the entire population for **G-computation
+            marginal estimand** — the population-marginal channel effect via
+            regression standardization on the fitted outcome model. The fitted
+            β stays the same; only credit aggregation changes. See Methodology
+            05 §3.5 (§3.5.7 for this parameter) and notebook 02 (Main) §10. AICPE is
+            interval-level so unaffected.
     """
     logger.info("  Building interval features (Section 4.1.7, Eq 12)...")
     interval_df, feature_cols, meta = _build_interval_features(
@@ -145,12 +159,13 @@ def compute_survival_attribution(
     )
     model = _fit_poisson_model(interval_df, feature_cols)
 
-    logger.info("  Credit assignment: %s", credit_method)
+    logger.info("  Credit assignment: %s (subpopulation=%s)", credit_method, subpopulation)
+    subpop_suffix = "" if subpopulation == "converters" else f" [G-comp marginal]"
     if credit_method == "backelim":
         raw_credits = _backwards_elimination_credits(
-            model, journeys, meta, query_events=None,
+            model, journeys, meta, query_events=None, subpopulation=subpopulation,
         )
-        method_name = "Survival/Poisson (BackElim)"
+        method_name = f"Survival/Poisson (BackElim){subpop_suffix}"
     elif credit_method == "incremental":
         if query_events is None:
             logger.info(
@@ -160,13 +175,14 @@ def compute_survival_attribution(
             model, journeys, meta,
             query_events=query_events if query_events is not None else pd.DataFrame(),
         )
-        method_name = "Survival/Poisson (Incremental)"
+        method_name = f"Survival/Poisson (Incremental){subpop_suffix}"
     elif credit_method == "aicpe":
+        # AICPE is interval-level (operates on full interval_df) — subpopulation moot.
         raw_credits = _aicpe_credits(model, interval_df, feature_cols)
         method_name = "Survival/Poisson (AICPE)"
     elif credit_method == "shapley":
-        raw_credits = _shapley_credits(model, journeys, meta)
-        method_name = "Survival/Poisson (Shapley)"
+        raw_credits = _shapley_credits(model, journeys, meta, subpopulation=subpopulation)
+        method_name = f"Survival/Poisson (Shapley){subpop_suffix}"
     else:
         raise ValueError(f"Unknown credit_method: {credit_method!r}")
 
@@ -220,6 +236,7 @@ def compute_survival_attribution(
         channel_credits_raw=raw_credits,
         metadata={
             "credit_method": credit_method,
+            "subpopulation": subpopulation,
             "normalize": normalize,
             "learned_decay_curves": decay_curves,
             "learned_query_decay_curves": query_decay,
@@ -249,6 +266,40 @@ def compute_backwards_elimination_attribution(
     """Alias for compute_survival_attribution(credit_method='backelim', **kwargs)."""
     kwargs.setdefault("credit_method", "backelim")
     return compute_survival_attribution(journeys, **kwargs)
+
+
+def compute_survival_gcomp_attribution(
+    journeys: pd.DataFrame,
+    credit_method: Literal["backelim", "shapley"] = "shapley",
+    **kwargs,
+) -> AttributionResult:
+    """G-computation marginal Survival/Poisson attribution.
+
+    Same fitted outcome model and per-user λ̂ predictor as
+    ``compute_survival_attribution``; only the credit aggregation differs —
+    averages coalition values over the **entire population** (not just
+    converters). This yields the regression-standardized population-marginal
+    channel effect (Pearl backdoor / G-computation estimand) under the
+    selection-on-observables assumption given ``user_features`` as $W$.
+
+    Mathematically (value function per Methodology 05 §3.5.2; efficiency-axiom
+    decomposition per §3.4; "4-layer framing" in notebook 02 (Main) §10):
+
+        v_Gcomp(S) = E_{u in ALL users}[ λ̂(W_u, channels in S exposed) ]
+        φ_c^Gcomp = Shapley credit on v_Gcomp
+        Σ_c φ_c^Gcomp = v_Gcomp(N) - v_Gcomp(∅)
+                      = E_u[λ̂(full) - λ̂(∅)]  (efficiency axiom)
+
+    Note: AICPE is interval-level so already approximates marginal; pass
+    ``credit_method="aicpe"`` to ``compute_survival_attribution`` for that.
+
+    Args mirror ``compute_survival_attribution`` except ``subpopulation`` is
+    fixed to ``"all"``.
+    """
+    kwargs.pop("subpopulation", None)  # silently ignore any override
+    return compute_survival_attribution(
+        journeys, credit_method=credit_method, subpopulation="all", **kwargs,
+    )
 
 
 def compute_aicpe_attribution(

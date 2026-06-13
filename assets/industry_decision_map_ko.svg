@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 450" font-family="'Segoe UI',Helvetica,Arial,sans-serif">
+  <rect x="1" y="1" width="858" height="448" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="430" y="40" text-anchor="middle" font-size="21" font-weight="700" fill="#1f2a44">산업 활용 — 하나의 모델, 네 가지 의사결정</text>
+
+  <!-- center node -->
+  <rect x="45" y="166" width="200" height="124" rx="11" fill="#3a4a7a" stroke="#28365c" stroke-width="1.5"/>
+  <text x="145" y="196" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">단일 fitted GLM</text>
+  <text x="145" y="214" text-anchor="middle" font-size="12.5" fill="#cdd6ee">산출물</text>
+  <text x="145" y="240" text-anchor="middle" font-size="11.5" fill="#e7ecf8">채널 credit · path &#916;</text>
+  <text x="145" y="258" text-anchor="middle" font-size="11.5" fill="#e7ecf8">감쇠 곡선 · 부트스트랩 CI</text>
+
+  <!-- bus -->
+  <line x1="245" y1="228" x2="288" y2="228" stroke="#6b7280" stroke-width="2.2"/>
+  <line x1="288" y1="100" x2="288" y2="356" stroke="#6b7280" stroke-width="2.2"/>
+  <!-- four horizontal arrows -->
+  <line x1="288" y1="100" x2="322" y2="100" stroke="#6b7280" stroke-width="2.2"/>
+  <polygon points="316,94 316,106 325,100" fill="#6b7280"/>
+  <line x1="288" y1="185" x2="322" y2="185" stroke="#6b7280" stroke-width="2.2"/>
+  <polygon points="316,179 316,191 325,185" fill="#6b7280"/>
+  <line x1="288" y1="271" x2="322" y2="271" stroke="#6b7280" stroke-width="2.2"/>
+  <polygon points="316,265 316,277 325,271" fill="#6b7280"/>
+  <line x1="288" y1="356" x2="322" y2="356" stroke="#6b7280" stroke-width="2.2"/>
+  <polygon points="316,350 316,362 325,356" fill="#6b7280"/>
+
+  <!-- card 1: budget -->
+  <rect x="330" y="64" width="495" height="72" rx="10" fill="#ffffff" stroke="#2ca58d" stroke-width="2"/>
+  <text x="348" y="90" font-size="14.5" font-weight="700" fill="#1f2a44">&#9312;  예산 재배분 — Effect &#8800; Efficiency</text>
+  <text x="348" y="116" font-size="12.5" fill="#2d3340">Paid Search 효과 1위지만 예산 0.09%; 진짜 동력은 Email 73.7% ($147K)</text>
+
+  <!-- card 2: journey -->
+  <rect x="330" y="149" width="495" height="72" rx="10" fill="#ffffff" stroke="#d9952b" stroke-width="2"/>
+  <text x="348" y="175" font-size="14.5" font-weight="700" fill="#1f2a44">&#9313;  캠페인 · 여정 설계</text>
+  <text x="348" y="201" font-size="12.5" fill="#2d3340">path-level Incremental Shapley &#8594; 재현가능한 35개 여정 템플릿 (count&#8805;5)</text>
+
+  <!-- card 3: decision rule -->
+  <rect x="330" y="235" width="495" height="72" rx="10" fill="#ffffff" stroke="#4c5bd4" stroke-width="2"/>
+  <text x="348" y="261" font-size="14.5" font-weight="700" fill="#1f2a44">&#9314;  의사결정 규칙 (Conditional vs Marginal)</text>
+  <text x="348" y="287" font-size="12.5" fill="#2d3340">과거 정산 &#8594; Conditional · 미래 예산 &#8594; Marginal (순위 &#961; = 1.000)</text>
+
+  <!-- card 4: uncertainty -->
+  <rect x="330" y="320" width="495" height="72" rx="10" fill="#ffffff" stroke="#7a4fb0" stroke-width="2"/>
+  <text x="348" y="346" font-size="14.5" font-weight="700" fill="#1f2a44">&#9315;  불확실성 &amp; ground-truth 없는 배포</text>
+  <text x="348" y="372" font-size="12.5" fill="#2d3340">부트스트랩 CI = 보고 신뢰도 게이트 · AIC/OOS-AUC로 GT 없이 검증</text>
+</svg>

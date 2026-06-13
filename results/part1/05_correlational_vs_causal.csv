@@ -1,0 +1,25 @@
+confounding_level,method,category,mae,kendall_tau
+Weak (η spread=0.2),Last Click,Correlational,0.0365164254625281,0.8095238095238096
+Weak (η spread=0.2),Time Decay,Correlational,0.0435370220589536,0.7142857142857143
+Weak (η spread=0.2),Markov (2nd),Correlational,0.0618841503233208,0.5238095238095238
+Weak (η spread=0.2),Shapley (model),Correlational,0.0432545656413202,0.8095238095238096
+Weak (η spread=0.2),IPW,Causal,0.0695763653124777,0.5238095238095238
+Weak (η spread=0.2),DML,Causal,0.0462571673243819,0.6190476190476191
+"Medium (η spread=0.8, default)",Last Click,Correlational,0.0342768416441701,0.7142857142857143
+"Medium (η spread=0.8, default)",Time Decay,Correlational,0.0447973322896295,0.9047619047619048
+"Medium (η spread=0.8, default)",Markov (2nd),Correlational,0.0655535774236816,0.4285714285714286
+"Medium (η spread=0.8, default)",Shapley (model),Correlational,0.0609386971167275,0.8095238095238096
+"Medium (η spread=0.8, default)",IPW,Causal,0.0710642267406024,0.4285714285714286
+"Medium (η spread=0.8, default)",DML,Causal,0.0597517877854736,0.6190476190476191
+Strong (η spread=2.0),Last Click,Correlational,0.0299452848038867,0.8095238095238096
+Strong (η spread=2.0),Time Decay,Correlational,0.0430931033929998,0.8095238095238096
+Strong (η spread=2.0),Markov (2nd),Correlational,0.074501106925418,0.4285714285714286
+Strong (η spread=2.0),Shapley (model),Correlational,0.0583751066363012,0.7200822998230957
+Strong (η spread=2.0),IPW,Causal,0.0768415684269972,0.4285714285714286
+Strong (η spread=2.0),DML,Causal,0.0640476383872399,0.5855400437691199
+Weak (η spread=0.2),Survival/Poisson,Causal,0.0464320165458333,1.0
+"Medium (η spread=0.8, default)",Survival/Poisson,Causal,0.046736197764823,0.9047619047619048
+Strong (η spread=2.0),Survival/Poisson,Causal,0.0450738163437783,1.0
+Weak (η spread=0.2),Survival/Poisson (Shapley),Causal (incremental),0.02060165713241893,0.9047619047619049
+"Medium (η spread=0.8, default)",Survival/Poisson (Shapley),Causal (incremental),0.022645472126964442,0.9047619047619049
+Strong (η spread=2.0),Survival/Poisson (Shapley),Causal (incremental),0.025524112409038437,1.0

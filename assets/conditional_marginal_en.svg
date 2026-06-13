@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 470" font-family="'Segoe UI',Helvetica,Arial,sans-serif">
+  <rect x="1" y="1" width="858" height="468" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="430" y="40" text-anchor="middle" font-size="21" font-weight="700" fill="#1f2a44">Conditional vs Marginal — two estimands, two decisions</text>
+
+  <text x="225" y="76" text-anchor="middle" font-size="13" font-weight="700" fill="#6b7280">confounding · collider structure</text>
+  <ellipse cx="225" cy="120" rx="125" ry="30" fill="#eef0fb" stroke="#4c5bd4" stroke-width="1.8"/>
+  <text x="225" y="116" text-anchor="middle" font-size="13.5" font-weight="700" fill="#2f3a66">user intent · segment</text>
+  <text x="225" y="133" text-anchor="middle" font-size="11.5" fill="#6b7280">latent confounder (η)</text>
+
+  <rect x="95" y="208" width="150" height="52" rx="9" fill="#ffffff" stroke="#2ca58d" stroke-width="2"/>
+  <text x="170" y="240" text-anchor="middle" font-size="14" font-weight="700" fill="#1f2a44">channel exposure X</text>
+
+  <rect x="290" y="208" width="150" height="52" rx="9" fill="#fdeceb" stroke="#d2453f" stroke-width="2"/>
+  <text x="365" y="232" text-anchor="middle" font-size="14" font-weight="700" fill="#1f2a44">conversion Y</text>
+  <text x="365" y="249" text-anchor="middle" font-size="10.5" fill="#d2453f">collider</text>
+
+  <line x1="180" y1="146" x2="150" y2="206" stroke="#6b7280" stroke-width="2"/>
+  <polygon points="143,197 156,200 148,209" fill="#6b7280"/>
+  <line x1="272" y1="146" x2="350" y2="206" stroke="#6b7280" stroke-width="2"/>
+  <polygon points="343,198 356,202 345,210" fill="#6b7280"/>
+  <line x1="245" y1="234" x2="288" y2="234" stroke="#6b7280" stroke-width="2"/>
+  <polygon points="282,228 282,240 291,234" fill="#6b7280"/>
+
+  <text x="225" y="300" text-anchor="middle" font-size="11.5" font-style="italic" fill="#a23b34">« conditioning on conversion = collider bias »</text>
+  <text x="225" y="322" text-anchor="middle" font-size="11" font-style="italic" fill="#9aa0ab">ambulances don't kill — the critically ill take them.</text>
+
+  <line x1="455" y1="70" x2="455" y2="360" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <rect x="480" y="78" width="345" height="124" rx="10" fill="#ffffff" stroke="#2ca58d" stroke-width="2"/>
+  <rect x="480" y="78" width="345" height="30" rx="10" fill="#2ca58d"/>
+  <text x="496" y="99" font-size="14.5" font-weight="700" fill="#ffffff">Conditional Shapley  (§4)</text>
+  <text x="498" y="130" font-size="12.5" fill="#2d3340">aggregated over — converters only</text>
+  <text x="498" y="152" font-size="12.5" fill="#2d3340">use — retrospective attribution audit</text>
+  <text x="498" y="178" font-size="12.5" font-weight="700" fill="#1f8068">matches GT_A (sample intensity) · MAE 0.012</text>
+
+  <rect x="480" y="226" width="345" height="124" rx="10" fill="#ffffff" stroke="#4c5bd4" stroke-width="2"/>
+  <rect x="480" y="226" width="345" height="30" rx="10" fill="#4c5bd4"/>
+  <text x="496" y="247" font-size="14.5" font-weight="700" fill="#ffffff">Marginal G-computation  (§10)</text>
+  <text x="498" y="278" font-size="12.5" fill="#2d3340">aggregated over — all users</text>
+  <text x="498" y="300" font-size="12.5" fill="#2d3340">use — forward budget · A/B pre-estimate</text>
+  <text x="498" y="326" font-size="12.5" font-weight="700" fill="#3340a8">matches GT_B (counterfactual) · MAE 0.020</text>
+
+  <rect x="40" y="382" width="780" height="60" rx="10" fill="#f4f6fa" stroke="#cbd5e3" stroke-width="1.4"/>
+  <text x="430" y="407" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1f2a44">Channel ranking agrees: Spearman &#961; = 1.000  (robust either way)</text>
+  <text x="430" y="429" text-anchor="middle" font-size="12.5" fill="#2d3340">magnitude differs: Paid Search 0.318 &#8594; 0.267 (&#8722;5pp)   ·   past accounting &#8594; Conditional,  future budget &#8594; Marginal</text>
+</svg>

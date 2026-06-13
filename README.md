@@ -1,5 +1,8 @@
 # Marketing Attribution: From Simulation to Scale
 
+> 📊 **Featured portfolio — Part 1 (Causal MTA):** [🇰🇷 한국어](part1_simulation/README.md) · [🇺🇸 English](part1_simulation/README.en.md)
+> — *why* a Poisson-Survival backbone carries Incremental/Shapley credit and a path-level decomposition, the measured impact, and how it's used in industry.
+
 ## Overview
 
 This project systematically compares **Marketing Attribution** methodologies against simulation ground truth, validates at scale on real data, and triangulates with aggregate-level Media Mix Modeling:
