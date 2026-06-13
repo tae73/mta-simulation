@@ -3,6 +3,7 @@ name = "mta-simulation"
 version = "0.1.0"
 description = "Marketing Attribution methodology comparison: Simulation ground truth + Criteo scale validation + Bayesian MMM Triangulation"
 requires-python = ">=3.10"
+license = { text = "MIT" }
 dependencies = [
     # Core
     "numpy>=1.24",
