@@ -40,17 +40,35 @@
   combination of low bootstrap variance among accurate methods (method-level mean CV 0.13 — its peers
   Incremental·Total Shapley sit at 0.60·0.99). And channel·path·population views **agree to 0.00% error**.
 
-**Key results at a glance** — the two outputs the method produces:
+## 🎯 Key results — the two experiments that matter most
+
+The method's two outputs, and the two experiments I consider most important here.
+
+**① Incremental vs Total — why "incremental" is non-negotiable (Experiment 06).**
+Raising the base conversion rate from ~3% to ~20%, I compare **Total Shapley** and **Incremental Shapley** channel credit.
+Because Total Shapley credits the baseline conversion too ("what would have happened with no ads"), as the base rate
+rises the **upper-funnel channels (Display·Social) collapse to zero credit** while lower-funnel (Paid Search) is over-valued.
+Incremental Shapley subtracts the baseline to isolate **only the ad-driven lift** → stable at any base rate.
+> **Why it matters**: in high-baseline businesses (subscription renewals, brand), using Total Shapley **over-invests budget in
+> Paid Search** — not the real value driver. This is why incremental is *required, not optional*.
 
 <p align="center">
-  <img src="../results/part1/02_channel_credit.png" alt="Channel credit assignment — BackElim vs Shapley, Spearman ρ=0.929" width="640">
-  <br><sub><b>Figure 2 · Channel credit assignment.</b> Causal per-channel credit from two operators (BackElim·Shapley) on the same IPP —
-  Paid Search·Email lead; ranking agreement ρ=0.929 (robust). <i>The method's primary output.</i></sub>
+  <img src="../results/part1/06_incremental_vs_total.png" alt="Incremental vs Total Shapley by base rate — Total collapses to zero for upper-funnel, Incremental stays stable" width="780">
+  <br><sub><b>Figure 2.</b> As the base rate rises, Total Shapley (blue) <b>collapses to zero</b> for Display·Social (high base: Display Total 0.00 vs Incremental 0.080)
+  while Incremental (pink) stays stable. Paid Search shows the opposite — Total over-credits the lower funnel. <i>Experiment 06.</i></sub>
 </p>
+
+**② Multi-path contribution — scoring *journeys*, not channels (path-level Incremental Shapley).**
+The same IPP is decomposed by *journey template (ordered channel tuple)* instead of by channel. Of 1,786 templates, a
+`count ≥ 5` filter keeps **35 robust templates** as *reproducible* campaign candidates. Top by **total contribution**
+(Email→Paid Search n=37, …) = "what drives revenue now"; top by **mean Δ** (rare 3-step journeys) = "design candidates".
+> **Why it matters**: "which channel to fund" (budget) and "which journey to amplify" (campaign design) are usually
+> separate analyses — here they come from the **same efficiency identity**, so the two decisions never contradict.
+
 <p align="center">
   <img src="../results/part1/02_path_topk.png" alt="Multi-path contribution — Top-K of 35 robust journeys" width="900">
-  <br><sub><b>Figure 3 · Multi-path contribution.</b> The 35 robust journeys ranked by path-level Incremental Shapley.
-  Top by total contribution: short, frequent Email→Paid Search (n=37) · Direct→Paid Search (n=24); top by mean Δ: rare but strong 3-step journeys.</sub>
+  <br><sub><b>Figure 3.</b> The 35 robust journeys ranked by path-level Incremental Shapley. <b>(Left)</b> total contribution = current revenue mainstays (short, frequent 2-step);
+  <b>(Right)</b> mean Δ = design candidates (rare but strong 3-step). Color = journey length (# touchpoints).</sub>
 </p>
 
 > 📖 **Pick your depth.** 30s → above · 5min → [Problem](#1-problem--why-classic-mta-falls-short)·[Method](#2-method--why-this-three-layer-design)·[Impact](#3-impact--honest-results)·[Industry use](#4-how-its-used-in-practice) ·
@@ -118,16 +136,21 @@ credit operators on the same IPP**.
 | **BackElim** | Remove ads *last → first*, crediting each ad with the resulting drop in $\hat\lambda$ | order-dependent · the per-channel drops sum exactly to $\hat\lambda(\text{full})-\hat\lambda(\varnothing)$ (no remainder) | bidding (last-touch concentration) |
 | **Shapley** | Average marginal contribution over 128 coalitions | order-free · coalition-fair · efficiency axiom (§2.3) | budget allocation |
 
-The two operators agree on channel ranking at **Spearman ρ = 0.929** (Figure 2 above) — high agreement is a reportable,
+The two operators agree on channel ranking at **Spearman ρ = 0.929** (Figure 5 below) — high agreement is a reportable,
 robust signal, while large divergence is a diagnostic signal that the channel is synergy-heavy. E.g. Paid Search
 is BackElim 0.45 vs Shapley 0.32 — **BackElim concentrates the credit on the last touch (Paid Search)** while
 **Shapley spreads it across coalitions**. (Derivations:
 [`Methodology_05`](../docs/Methodology_05_Causal_Attribution_Frameworks.md) Eq. 13·25.)
 
+<p align="center">
+  <img src="../results/part1/02_channel_credit.png" alt="BackElim vs Shapley channel credit, Spearman ρ=0.929" width="680">
+  <br><sub><b>Figure 5.</b> Per-channel credit from two credit operators (BackElim·Shapley) on the same IPP. Ranking agreement ρ=0.929 — a robust signal.</sub>
+</p>
+
 **Why "incremental" (vs Total Shapley).** Total Shapley credits the baseline conversion too (what would have
 happened with no ads at all). It therefore over-values lower-funnel channels (Paid Search, Email) that ride
 high-intent users, and **collapses to zero for upper-funnel channels (Display·Social) as the base rate rises**
-(Experiment 06: at high base, Display Total = 0.00 vs Incremental = 0.080). Incremental Shapley subtracts the
+(Figure 2 above, Experiment 06: at high base, Display Total = 0.00 vs Incremental = 0.080). Incremental Shapley subtracts the
 baseline to isolate **only the ad-driven lift**.
 
 ### 2.3 Multi-path — why a path-level decomposition
@@ -153,7 +176,7 @@ The same Shapley credit yields two causal quantities depending on **who you aggr
 
 <p align="center">
   <img src="../assets/conditional_marginal_en.svg" alt="Confounding / collider structure and how Conditional / Marginal estimands map to decisions" width="820">
-  <br><sub><b>Figure 5.</b> Aggregating conditional on conversion (converters-only) opens collider bias. Past accounting → Conditional, future budget → Marginal.</sub>
+  <br><sub><b>Figure 6.</b> Aggregating conditional on conversion (converters-only) opens collider bias. Past accounting → Conditional, future budget → Marginal.</sub>
 </p>
 
 | Estimand | Aggregated over | Question it answers | GT match |
@@ -182,7 +205,7 @@ I evaluated 18 methods against ground truth (the known DGP parameters). The main
 
 <p align="center">
   <img src="../results/part1/01_mae_vs_tau.png" alt="Accuracy (MAE) × ranking agreement (Kendall τ) landscape across 18 methods" width="720">
-  <br><sub><b>Figure 6.</b> Ground-truth error (MAE, ↓ better) vs ranking agreement (Kendall τ, ↑ better).
+  <br><sub><b>Figure 7.</b> Ground-truth error (MAE, ↓ better) vs ranking agreement (Kendall τ, ↑ better).
   Causal / incremental methods (top-left) separate cleanly from heuristic / predict-only ones (bottom-right, negative τ).</sub>
 </p>
 
@@ -214,13 +237,7 @@ I evaluated 18 methods against ground truth (the known DGP parameters). The main
    mean CV of 0.99 (nearly the worst) make it unstable — a risk hidden if you look at accuracy alone.
 4. **The best rule-based is surprisingly competitive.** Last Click's MAE (0.038) isn't bad. The real advantage
    of causal methods is satisfying *ranking, allocation, and stability together* and yielding **interpretable
-   outputs** (decay curves, synergy, incremental vs total).
-
-<p align="center">
-  <img src="../results/part1/06_incremental_vs_total.png" alt="As base rate rises, Total Shapley collapses to zero for upper-funnel channels while Incremental stays stable" width="620">
-  <br><sub><b>Figure 7.</b> As the base rate rises, Total Shapley collapses to zero for Display·Social while Incremental stays stable.
-  Per-method stability (mean CV) figures are in the table above (<a href="../results/part1/10_bootstrap_stability.csv">10_bootstrap_stability.csv</a>).</sub>
-</p>
+   outputs** (decay curves, synergy, incremental vs total). Total Shapley's collapse behavior is shown in **Figure 2** (Key results) above.
 
 ---
 
