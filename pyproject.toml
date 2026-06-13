@@ -50,4 +50,7 @@ line-length = 100
 target-version = "py310"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["part1_simulation/tests"]
+markers = [
+    "slow: marks tests as slow (DL training / full-pipeline calibration); deselect with -m 'not slow'",
+]

@@ -64,10 +64,16 @@ def evaluate_all_methods(
         metrics["method"] = result.method
         rows.append(metrics)
 
+    main_cols = ["method", "mae", "rmse", "kendall_tau", "top3_accuracy"]
+
+    # Empty input → empty DataFrame with the expected schema (no crash).
+    if not rows:
+        bias_cols = [f"bias_{ch}" for ch in sorted(ground_truth)]
+        return pd.DataFrame(columns=main_cols + bias_cols)
+
     df = pd.DataFrame(rows)
 
     # Reorder columns: method first, then main metrics, then bias
-    main_cols = ["method", "mae", "rmse", "kendall_tau", "top3_accuracy"]
     bias_cols = [c for c in df.columns if c.startswith("bias_")]
     df = df[main_cols + sorted(bias_cols)]
 
