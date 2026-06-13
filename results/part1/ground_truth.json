@@ -1,0 +1,130 @@
+{
+  "ground_truth_A": {
+    "method": "intensity_decomposition",
+    "channel_credits": {
+      "Display": 0.06006554112597804,
+      "Social": 0.036827674877493985,
+      "Organic Search": 0.13177081885436676,
+      "Paid Search": 0.31109031771241397,
+      "Email": 0.22607068433949323,
+      "Referral": 0.07980560113891585,
+      "Direct": 0.15436936195133796
+    },
+    "channel_ranking": [
+      "Paid Search",
+      "Email",
+      "Direct",
+      "Organic Search",
+      "Referral",
+      "Display",
+      "Social"
+    ]
+  },
+  "ground_truth_B": {
+    "method": "counterfactual_shapley",
+    "channel_credits": {
+      "Display": 0.08564112339419562,
+      "Social": 0.04947252193394582,
+      "Organic Search": 0.15368391423233993,
+      "Paid Search": 0.28925130967251567,
+      "Email": 0.21329941018200596,
+      "Referral": 0.07826468072371026,
+      "Direct": 0.13038703986128672
+    },
+    "channel_ranking": [
+      "Paid Search",
+      "Email",
+      "Organic Search",
+      "Direct",
+      "Display",
+      "Referral",
+      "Social"
+    ]
+  },
+  "dgp_parameters": {
+    "alpha_0": -5.625,
+    "betas": {
+      "Display": 0.3,
+      "Social": 0.4,
+      "Organic Search": 0.5,
+      "Paid Search": 1.2,
+      "Email": 0.8,
+      "Referral": 0.5,
+      "Direct": 0.7
+    },
+    "decay_half_lives_days": {
+      "Display": 14.0,
+      "Social": 3.0,
+      "Organic Search": 7.0,
+      "Paid Search": 1.0,
+      "Email": 5.0,
+      "Referral": 7.0,
+      "Direct": 2.0
+    },
+    "cross_influences": [
+      [
+        "Display",
+        "Paid Search",
+        0.4
+      ],
+      [
+        "Social",
+        "Email",
+        0.3
+      ],
+      [
+        "Organic Search",
+        "Direct",
+        0.2
+      ]
+    ],
+    "segment_etas": {
+      "New": -0.3,
+      "Exploratory": 0.0,
+      "Loyal": 0.5
+    }
+  },
+  "data_statistics": {
+    "n_users": 100000,
+    "conversion_rate": 0.02305,
+    "n_converters": 2305
+  },
+  "ground_truth_budget": {
+    "method": "linear_response_efficiency",
+    "marginal_effects": {
+      "Display": 0.19152014567809636,
+      "Social": 0.12852375789223772,
+      "Organic Search": 0.23197014239190927,
+      "Paid Search": 0.4679061847878397,
+      "Email": 0.4580028637702059,
+      "Referral": 0.2683252801989184,
+      "Direct": 0.32623080366085133
+    },
+    "channel_efficiency": {
+      "Display": 38.304029135619274,
+      "Social": 16.065469736529714,
+      "Paid Search": 0.18716247391513588,
+      "Email": 152.6676212567353
+    },
+    "optimal_allocation_fraction": {
+      "Display": 0.18484334294470287,
+      "Social": 0.0775269651545783,
+      "Paid Search": 0.000903187944792564,
+      "Email": 0.7367265039559263
+    },
+    "optimal_allocation_dollars": {
+      "Display": 36968.66858894057,
+      "Social": 15505.39303091566,
+      "Paid Search": 180.6375889585128,
+      "Email": 147345.30079118526
+    },
+    "efficiency_ranking": [
+      "Email",
+      "Display",
+      "Social",
+      "Paid Search"
+    ],
+    "total_budget": 200000.0,
+    "revenue_per_conversion": 100.0
+  }
+}
