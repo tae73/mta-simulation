@@ -44,6 +44,23 @@ def setup_notebook(
         "axes.titlesize": font_size + 3,
         "axes.labelsize": font_size + 1,
     })
+    # CJK-capable font fallback so any Korean label never renders as tofu (□□□).
+    # DejaVu stays primary for Latin/Greek/math; a Korean font is appended as a
+    # fallback (matplotlib resolves missing glyphs through the family list).
+    from matplotlib import font_manager
+    _cjk_candidates = [
+        "AppleGothic", "Apple SD Gothic Neo", "Malgun Gothic",
+        "NanumGothic", "Nanum Gothic", "Noto Sans CJK KR", "Arial Unicode MS",
+    ]
+    _available = {f.name for f in font_manager.fontManager.ttflist}
+    _cjk = next((c for c in _cjk_candidates if c in _available), None)
+    if _cjk:
+        plt.rcParams["font.sans-serif"] = (
+            ["DejaVu Sans", _cjk]
+            + [s for s in plt.rcParams.get("font.sans-serif", []) if s != "DejaVu Sans"]
+        )
+        plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["axes.unicode_minus"] = False
 
 
 # Canonical path constants. Resolve identically to the legacy hardcoded

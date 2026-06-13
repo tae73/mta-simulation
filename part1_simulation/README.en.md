@@ -40,6 +40,19 @@
   combination of low bootstrap variance among accurate methods (method-level mean CV 0.13 — its peers
   Incremental·Total Shapley sit at 0.60·0.99). And channel·path·population views **agree to 0.00% error**.
 
+**Key results at a glance** — the two outputs the method produces:
+
+<p align="center">
+  <img src="../results/part1/02_channel_credit.png" alt="Channel credit assignment — BackElim vs Shapley, Spearman ρ=0.929" width="640">
+  <br><sub><b>Figure 2 · Channel credit assignment.</b> Causal per-channel credit from two operators (BackElim·Shapley) on the same IPP —
+  Paid Search·Email lead; ranking agreement ρ=0.929 (robust). <i>The method's primary output.</i></sub>
+</p>
+<p align="center">
+  <img src="../results/part1/02_path_topk.png" alt="Multi-path contribution — Top-K of 35 robust journeys" width="900">
+  <br><sub><b>Figure 3 · Multi-path contribution.</b> The 35 robust journeys ranked by path-level Incremental Shapley.
+  Top by total contribution: short, frequent Email→Paid Search (n=37) · Direct→Paid Search (n=24); top by mean Δ: rare but strong 3-step journeys.</sub>
+</p>
+
 > 📖 **Pick your depth.** 30s → above · 5min → [Problem](#1-problem--why-classic-mta-falls-short)·[Method](#2-method--why-this-three-layer-design)·[Impact](#3-impact--honest-results)·[Industry use](#4-how-its-used-in-practice) ·
 > 30min → [Limitations](#5-limitations--honest-scoping)·[Reproduce](#6-reproduce-quick-start)·[Appendix: 11 experiments](#appendix-11-experiment-gallery) + [`docs/Methodology_*`](../docs).
 
@@ -83,7 +96,7 @@ snapshot logistic regression throws that structure away.
 - **Estimation**: slice each touchpoint into time intervals and fit an **interval-split Poisson GLM**
   (offset = log Δt) — *the GLM is the estimation mechanism*, not the model-class name. Right-censoring is handled natively.
 - **Let the data speak**: it *learns* a 5-bin decay curve per channel — Paid Search cools within ~1 day,
-  Display lingers to ~14 days (Figure 2). No assumed lookback window.
+  Display lingers to ~14 days (Figure 4). No assumed lookback window.
 - **No peeking at ground truth**: spec chosen by **AIC** (`+Position`, ΔAIC −435 vs baseline), fit checked by
   Deviance/df, predictive power by hold-out — the model is selected *without* ground truth (key to deployment).
 - **Why a backbone**: a single IPP is fit, so every downstream credit / path / population decomposition is
@@ -91,8 +104,8 @@ snapshot logistic regression throws that structure away.
 
 <p align="center">
   <img src="../results/part1/02_decay_curves.png" alt="Per-channel decay curves learned by the IPP — Paid Search decays fast, Display slow" width="720">
-  <br><sub><b>Figure 2.</b> The per-channel decay (β, log-intensity contribution) the IPP <i>learns</i> from data. Paid Search peaks at 0–1 day then drops
-  (effective lifetime ~1 day); Display persists out to two weeks — time structure estimated directly, no lookback window assumed. <i>(Axis labels in Korean; channel/legend in English.)</i></sub>
+  <br><sub><b>Figure 4.</b> The per-channel decay (β, log-intensity contribution) the IPP <i>learns</i> from data. Paid Search peaks at 0–1 day then drops
+  (effective lifetime ~1 day); Display persists out to two weeks — time structure estimated directly, no lookback window assumed.</sub>
 </p>
 
 ### 2.2 Channel credit — why stack Incremental·Shapley on the backbone
@@ -105,16 +118,11 @@ credit operators on the same IPP**.
 | **BackElim** | Remove ads *last → first*, crediting each ad with the resulting drop in $\hat\lambda$ | order-dependent · the per-channel drops sum exactly to $\hat\lambda(\text{full})-\hat\lambda(\varnothing)$ (no remainder) | bidding (last-touch concentration) |
 | **Shapley** | Average marginal contribution over 128 coalitions | order-free · coalition-fair · efficiency axiom (§2.3) | budget allocation |
 
-The two operators agree on channel ranking at **Spearman ρ = 0.929** (Figure 3) — high agreement is a reportable,
+The two operators agree on channel ranking at **Spearman ρ = 0.929** (Figure 2 above) — high agreement is a reportable,
 robust signal, while large divergence is a diagnostic signal that the channel is synergy-heavy. E.g. Paid Search
 is BackElim 0.45 vs Shapley 0.32 — **BackElim concentrates the credit on the last touch (Paid Search)** while
 **Shapley spreads it across coalitions**. (Derivations:
 [`Methodology_05`](../docs/Methodology_05_Causal_Attribution_Frameworks.md) Eq. 13·25.)
-
-<p align="center">
-  <img src="../results/part1/02_channel_credit.png" alt="BackElim vs Shapley channel credit, Spearman ρ=0.929" width="700">
-  <br><sub><b>Figure 3.</b> Two credit operators (BackElim·Shapley) on the same IPP. Ranking agreement ρ=0.929 — a robust signal.</sub>
-</p>
 
 **Why "incremental" (vs Total Shapley).** Total Shapley credits the baseline conversion too (what would have
 happened with no ads at all). It therefore over-values lower-funnel channels (Paid Search, Email) that ride
@@ -137,14 +145,7 @@ generate the most incremental conversions**" — a **campaign / journey-design**
   aggregations of the same game*.
 - **Keep only what's reproducible**: of 1,786 unique templates, ~98% are one-person flukes (count=1, long
   unique journeys). A `count ≥ 5` filter keeps **35 robust templates** (covering 15.5% of converters) as
-  campaign candidates (Figure 4).
-
-<p align="center">
-  <img src="../results/part1/02_path_topk.png" alt="35 robust journey templates — Total Contribution vs Mean Δ Top-K" width="900">
-  <br><sub><b>Figure 4.</b> The 35 robust journeys ranked by path-level Incremental Shapley. <b>Left (Total Contribution)</b>:
-  frequent, high-total journeys — short 2-step paths like Email→Paid Search (n=37) and Direct→Paid Search (n=24).
-  <b>Right (Mean Δ)</b>: rare but high-impact-per-occurrence 3-step journeys. Color = journey length (# touchpoints).</sub>
-</p>
+  campaign candidates (Figure 3 above).
 
 ### 2.4 Conditional vs Marginal — why two estimands
 
@@ -258,7 +259,7 @@ once combined with the cost structure.
 
 ### 4.2 Campaign · journey design — 35 reproducible templates
 
-Path-level Incremental Shapley (§2.3, Figure 4) ranks *which journey patterns produce incremental conversions*.
+Path-level Incremental Shapley (§2.3, Figure 3 above) ranks *which journey patterns produce incremental conversions*.
 The 35 robust templates (`count ≥ 5`, mostly short, frequent 2-step paths like Email→Paid Search and
 Direct→Paid Search) are the journeys "working now" — a priority list to amplify. Because channel budget and
 journey design satisfy the **same efficiency identity**, the two decisions never contradict.
@@ -397,5 +398,4 @@ Each experiment's data (CSV) is under [`results/part1/`](../results/part1/); key
 
 <sub>This document uses only the canonical figures from <b>committed artifacts (`results/part1/*.csv`, `ground_truth.json`)</b>,
 and reports failures / weak results as they are (First Click·Transformer negative τ, debiased non-superiority,
-Total Shapley fragility, Markov-DGP collapse). Some in-text figures (e.g. Figure 2, decay curves) are original
-notebook-02 outputs and retain Korean axis labels. · <a href="README.md">한국어 버전 →</a></sub>
+Total Shapley fragility, Markov-DGP collapse). · <a href="README.md">한국어 버전 →</a></sub>
