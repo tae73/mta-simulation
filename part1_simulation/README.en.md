@@ -45,17 +45,19 @@
 The method's two outputs, and the two experiments I consider most important here.
 
 **① Incremental vs Total — why "incremental" is non-negotiable (Experiment 06).**
-Raising the base conversion rate from ~3% to ~20%, I compare **Total Shapley** and **Incremental Shapley** channel credit.
-Because Total Shapley credits the baseline conversion too ("what would have happened with no ads"), as the base rate
-rises the **upper-funnel channels (Display·Social) collapse to zero credit** while lower-funnel (Paid Search) is over-valued.
-Incremental Shapley subtracts the baseline to isolate **only the ad-driven lift** → stable at any base rate.
+Raising the base conversion rate from ~3% to ~20%, I overlay **two ground truths and three credit operators**. The two truths are
+**GT_A** (intensity decomposition) = *"who was present in the conversions"* (the **conditional / audit** truth; leans to the strong lower-funnel) and
+**GT_B** (counterfactual) = *"what is lost if you remove this channel"* (the do(remove) lift = the **marginal / forward** truth an A/B test measures; recovers more of the upper-funnel's causal role) — same ranking, different magnitude (§2.4; Paid Search GT_A 0.315 > GT_B 0.299, Display GT_B 0.084 > GT_A 0.061).
+Of the operators, **Total Shapley** credits the baseline too, so as the base rate rises it **collapses upper-funnel (Display·Social) to zero** and over-credits Paid Search beyond both truths.
+**Incremental Shapley** subtracts the baseline and **stays inside the two-truth band** → stable at any base rate (BackElim over-concentrates on the last touch).
 > **Why it matters**: in high-baseline businesses (subscription renewals, brand), using Total Shapley **over-invests budget in
 > Paid Search** — not the real value driver. This is why incremental is *required, not optional*.
 
 <p align="center">
-  <img src="../results/part1/06_incremental_vs_total.png" alt="Incremental vs Total Shapley by base rate — Total collapses to zero for upper-funnel, Incremental stays stable" width="780">
-  <br><sub><b>Figure 2.</b> As the base rate rises, Total Shapley (blue) <b>collapses to zero</b> for Display·Social (high base: Display Total 0.00 vs Incremental 0.080)
-  while Incremental (pink) stays stable. Paid Search shows the opposite — Total over-credits the lower funnel. <i>Experiment 06.</i></sub>
+  <img src="../results/part1/06_incremental_vs_total.png" alt="Two ground truths (GT_A·GT_B) vs three operators (Incremental·Total·BackElim) channel credit by base rate — Incremental stays in the truth band, Total collapses upper-funnel to zero" width="900">
+  <br><sub><b>Figure 2.</b> Five bars on the same IPP: two ground truths (<b>GT_A</b> gray·conditional, <b>GT_B</b> green·incremental — both black-edged) and three operators (Incremental·Total·BackElim).
+  <b>Incremental (pink) stays inside the two-truth band</b> while <b>Total (blue) departs from both</b> — over-crediting Paid Search (high base 0.400 vs GT ~0.29) and <b>collapsing Display·Social to 0</b> (GT 0.080·0.059 → Total 0.00).
+  BackElim (orange) over-concentrates on the last touch. <i>Experiment 06 — why the real incremental credit matters.</i></sub>
 </p>
 
 **② Multi-path contribution — scoring *journeys*, not channels (path-level Incremental Shapley).**
@@ -150,8 +152,8 @@ is BackElim 0.45 vs Shapley 0.32 — **BackElim concentrates the credit on the l
 **Why "incremental" (vs Total Shapley).** Total Shapley credits the baseline conversion too (what would have
 happened with no ads at all). It therefore over-values lower-funnel channels (Paid Search, Email) that ride
 high-intent users, and **collapses to zero for upper-funnel channels (Display·Social) as the base rate rises**
-(Figure 2 above, Experiment 06: at high base, Display Total = 0.00 vs Incremental = 0.080). Incremental Shapley subtracts the
-baseline to isolate **only the ad-driven lift**.
+(Figure 2 above, Experiment 06: at high base, Display is GT 0.080 / Incremental 0.088 but Total 0.00). Incremental Shapley subtracts the
+baseline to isolate **only the ad-driven lift**, staying inside the two ground-truth (GT_A·GT_B) band.
 
 ### 2.3 Multi-path — why a path-level decomposition
 
@@ -274,12 +276,23 @@ once combined with the cost structure.
 > Search. Only methods that combine incremental lift with efficiency (Incremental Shapley allocation MAE
 > **0.013**, Survival/Poisson Shapley **0.019**) identify Email as the real value driver.
 
-### 4.2 Campaign · journey design — 35 reproducible templates
+### 4.2 Campaign · journey design — a playbook from 35 reproducible templates
 
 Path-level Incremental Shapley (§2.3, Figure 3 above) ranks *which journey patterns produce incremental conversions*.
-The 35 robust templates (`count ≥ 5`, mostly short, frequent 2-step paths like Email→Paid Search and
-Direct→Paid Search) are the journeys "working now" — a priority list to amplify. Because channel budget and
-journey design satisfy the **same efficiency identity**, the two decisions never contradict.
+Of 1,786 unique templates, the **35 robust ones** (`count ≥ 5`, covering 15.5% of converters) become an actionable
+campaign playbook when read through **two lenses** — answering the question of *journey design*, not budget.
+
+| Lens | What | Top templates (observed) | Strategic action |
+|---|---|---|---|
+| **Current revenue mainstays** (total contribution = count × mean Δ) | "journeys working now, at scale" | Email→Paid Search (n=37, largest) · Direct→Paid Search (n=24) · Email→Direct (n=20) — short, frequent 2-step | **Defend·amplify**: hold budget, strengthen bids, prevent churn |
+| **Design candidates** (mean Δ = per-user incremental) | "rare but high per-user impact" | Direct→Paid Search→Paid Search (n=5, highest mean Δ) · Email→Email→Paid Search (n=5) — strong 3-step | **Test·scale**: design a nurture sequence, validate via A/B, then scale |
+
+> **Why two lenses**: top-by-total-contribution journeys *already drive revenue*, so the play is to **protect** them;
+> top-by-mean-Δ journeys are *rare but high-lift per user*, so they are candidates to **grow**. Budget defends the
+> mainstays while experiment budget chases the high-Δ rare paths — and because channel budget and journey design come
+> from the **same efficiency identity** (§2.3 channel↔path duality), the two decisions never contradict. *(Source:
+> notebook 02 Cell 24 path-level decomposition — Email→Paid Search is #1 by total contribution (n=37). Values are
+> illustrative against simulation ground truth.)*
 
 ### 4.3 Decision rule — Conditional for the past, Marginal for the future
 
@@ -306,6 +319,29 @@ Marginal. → 1-page practitioner guide: [`docs/Marketing_Handout_Conditional_vs
   which benchmarks all 18 methods through one harness, OOS AUC clusters around ~0.64 (the values differ because the evaluation
   setup differs). Either way it serves as a *reasonableness gate* — "predictive power hasn't collapsed" — not a proof of causal validity.</sub>
 </p>
+
+### 4.5 Why upgrade to this method — the managerial case
+
+From a manager's seat, this upgrade isn't a model flourish — it's **a change that de-risks budget decisions**.
+
+1. **Classic attribution buys the *wrong* budget.** Last Click, Linear, and Total Shapley credit the baseline
+   conversion (what would have happened with no ads), so they **over-allocate to Paid Search**, which rides high-intent
+   users — even though the real efficiency leader is Email (§4.1: efficiency 152.7 vs Paid Search 0.19). Rule-based
+   methods ignore the time and cost structure entirely.
+2. **Same backbone, swap only the credit operator → accuracy jumps.** On the same IPP, going BackElim→Shapley alone
+   improves **channel MAE 2.9× and allocation 4.4×** (0.046→0.016, 0.083→0.019). And the survival backbone tackles
+   head-on what rule-based misses: **right-censoring** ("no conversion in 8h ≠ zero effect") and **channel-specific
+   time decay** (§2.1).
+3. **The estimand aligns with the decision.** What Marginal G-computation recovers is the **do(remove channel)
+   counterfactual — exactly what an A/B test measures**. So the offline observational estimate is *A/B-validatable* and
+   fits forward budget decisions. The two views (Conditional/Marginal) agree on ranking at ρ=1.000, so the recommendation is robust.
+4. **Stakeholders can trust it.** Low bootstrap variance (mean CV 0.13) makes it reportable, and the method is labeled
+   honestly as **causal — outcome-model only** (no propensity correction), so it doesn't overclaim — with the next
+   upgrade (DR/IPW-weighted survival, Tier 2) named for when the assumptions break.
+
+> In one line: **"same data, same backbone, swapped to the estimand the decision actually needs — and out comes a more
+> accurate, more stable, A/B-validatable budget recommendation."** That is what justifies the incremental·survival
+> upgrade *in industry*.
 
 ---
 
@@ -400,7 +436,7 @@ part1_simulation/
 | 03 | Data-scale sensitivity | data needs vary by method (survival converges ~10K) | [`03_data_scale.csv`](../results/part1/03_data_scale.csv) |
 | 04 | DGP-assumption sensitivity | survival robust across DGP variants (Shapley improves w/o decay) | [`04_dgp_sensitivity.csv`](../results/part1/04_dgp_sensitivity.csv) |
 | 05 | Correlational vs causal | under moderate confounding, debiased doesn't beat correlational | [`05_correlational_vs_causal.csv`](../results/part1/05_correlational_vs_causal.csv) |
-| 06 | Incremental vs Total | at high base, Total collapses to 0, Incremental stays stable | [`06_incremental_vs_total.csv`](../results/part1/06_incremental_vs_total.csv) |
+| 06 | GT(A·B) vs Incremental·Total·BackElim | Incremental stays in the two-truth band; at high base Total collapses upper-funnel to 0 | [`06_incremental_vs_total.csv`](../results/part1/06_incremental_vs_total.csv) |
 | 07 | Budget optimization | Incremental Shapley allocation MAE 0.013 (#1) | [`07_budget_optimization.csv`](../results/part1/07_budget_optimization.csv) |
 | 08 | OOS predictive validation | AUC ~0.64 clustered; strong negative GT-MAE↔OOS-AUC correlation | [`08_predictive_validation.csv`](../results/part1/08_predictive_validation.csv) |
 | 09 | Decision impact | allocation→revenue lift; a "+lift" can be an artifact of a failed allocation | [`09_decision_impact.csv`](../results/part1/09_decision_impact.csv) |

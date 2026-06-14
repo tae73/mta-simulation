@@ -26,7 +26,12 @@ from part1_simulation.experiments._common import (
     prepare_output_dir,
     setup_experiment_logging,
 )
+from part1_simulation.evaluation.ground_truth import (
+    compute_ground_truth_intensity,
+    compute_ground_truth_shapley,
+)
 from part1_simulation.models.causal.incremental_shapley import compute_incremental_shapley
+from part1_simulation.models.causal.survival_attribution import compute_survival_attribution
 from part1_simulation.models.shapley import compute_shapley_model_based
 
 logger = logging.getLogger(__name__)
@@ -42,6 +47,24 @@ ALPHA_0_LEVELS = {
     "Medium base (~8%)": -2.5, # base ≈ 8%, total conv ~35%
     "High base (~20%)": -1.8,  # base ≈ 20%, total conv ~55%
 }
+
+# Series shown in the figure: ground truth (GT_B, the counterfactual incremental
+# truth) plus three credit operators. All normalized to channel-credit share (Σ=1)
+# so the four are directly comparable on a single axis. (col, label, color, edge)
+SERIES = [
+    ("ground_truth_a", "GT_A — intensity decomp (conditional / total)", "#555555", "black"),
+    ("ground_truth_b", "GT_B — counterfactual (marginal / incremental)", "#2E8B57", "black"),
+    ("incremental_shapley", "Incremental Shapley", "#DDA0DD", "none"),
+    ("total_shapley", "Total Shapley", "#45B7D1", "none"),
+    ("backelim", "BackElim (survival, last-touch)", "#FF8C00", "none"),
+]
+
+
+def _normalize_share(credits: dict) -> dict:
+    """Clamp negatives and normalize to a channel-credit share summing to 1."""
+    pos = {ch: max(0.0, credits.get(ch, 0.0)) for ch in CHANNEL_NAMES}
+    total = sum(pos.values())
+    return {ch: (v / total if total > 0 else 0.0) for ch, v in pos.items()}
 
 
 def run_experiment_06(output_dir: str = "results/part1") -> pd.DataFrame:
@@ -67,12 +90,34 @@ def run_experiment_06(output_dir: str = "results/part1") -> pd.DataFrame:
             logger.warning(f"  Too few converters ({stats['n_converted']}), skipping")
             continue
 
-        # Total Shapley
+        # Total Shapley (model-based logistic; includes baseline → over-credits)
         total_shap = compute_shapley_model_based(journeys)
 
-        # Incremental Shapley (learns response model from data)
+        # Incremental Shapley (Du; learns response model, subtracts baseline)
         inc_shap = compute_incremental_shapley(journeys, sample_users=3000)
         actual_base_rate = inc_shap.metadata["base_conversion_rate"]
+
+        # Two ground truths (both normalized to a channel-credit share):
+        #   GT_A — intensity decomposition over converters = the CONDITIONAL / total
+        #          truth ("who was present in the conversions"; retrospective audit;
+        #          includes baseline-correlated structure).
+        #   GT_B — counterfactual Shapley = the MARGINAL / incremental truth ("what is
+        #          lost if a channel is removed" — the do-effect an A/B test measures).
+        #          Incremental Shapley targets GT_B.
+        gt_a_credits = compute_ground_truth_intensity(journeys, config)
+        gt_b_credits = compute_ground_truth_shapley(journeys, config, sample_users=3000)
+
+        # Survival/Poisson BackElim — last-touch credit operator on the IPP backbone.
+        be_credits = compute_survival_attribution(
+            journeys, credit_method="backelim"
+        ).channel_credits
+
+        # Normalize every series to a channel-credit share (Σ=1) for comparability.
+        gt_a_n = _normalize_share(gt_a_credits)
+        gt_b_n = _normalize_share(gt_b_credits)
+        inc_n = _normalize_share(inc_shap.channel_credits)
+        tot_n = _normalize_share(total_shap.channel_credits)
+        be_n = _normalize_share(be_credits)
 
         logger.info(f"  Base rate (no ads, learned): {actual_base_rate:.4f}")
         logger.info(f"  Actual conversion rate: {actual_conv_rate:.4f}")
@@ -85,12 +130,12 @@ def run_experiment_06(output_dir: str = "results/part1") -> pd.DataFrame:
                 "base_rate": actual_base_rate,
                 "conversion_rate": actual_conv_rate,
                 "channel": ch,
-                "total_shapley": total_shap.channel_credits.get(ch, 0),
-                "incremental_shapley": inc_shap.channel_credits.get(ch, 0),
-                "difference": (
-                    total_shap.channel_credits.get(ch, 0)
-                    - inc_shap.channel_credits.get(ch, 0)
-                ),
+                "ground_truth_a": gt_a_n.get(ch, 0),
+                "ground_truth_b": gt_b_n.get(ch, 0),
+                "incremental_shapley": inc_n.get(ch, 0),
+                "total_shapley": tot_n.get(ch, 0),
+                "backelim": be_n.get(ch, 0),
+                "difference": tot_n.get(ch, 0) - inc_n.get(ch, 0),
             })
 
     result_df = pd.DataFrame(all_rows)
@@ -106,37 +151,45 @@ def run_experiment_06(output_dir: str = "results/part1") -> pd.DataFrame:
         print(f"\n{level} (base={base_rate:.4f}, conv={conv_rate:.4f}):")
         print(f"  Avg |Total - Incremental|: {mae_diff:.4f}")
         for _, row in subset.iterrows():
-            print(f"  {row['channel']:20s}: Total={row['total_shapley']:.4f}, "
-                  f"Incr={row['incremental_shapley']:.4f}, Δ={row['difference']:+.4f}")
+            print(f"  {row['channel']:20s}: GT_A={row['ground_truth_a']:.3f}  "
+                  f"GT_B={row['ground_truth_b']:.3f}  Incr={row['incremental_shapley']:.3f}  "
+                  f"Total={row['total_shapley']:.3f}  BE={row['backelim']:.3f}")
 
-    # Plot
+    # Plot — 4 series (GT_B + three credit operators), grouped bars per channel,
+    # faceted by base rate. As base rate rises, Total Shapley peels off the ground
+    # truth (collapses for upper-funnel) while Incremental Shapley stays glued to GT.
     levels = result_df["base_rate_level"].unique()
     if len(levels) > 0:
-        fig, axes = plt.subplots(1, len(levels), figsize=(5 * len(levels), 6), sharey=True)
+        fig, axes = plt.subplots(1, len(levels), figsize=(5.2 * len(levels), 6), sharey=True)
         if len(levels) == 1:
             axes = [axes]
+
+        width = 0.16
+        offsets = [-2 * width, -1 * width, 0.0, 1 * width, 2 * width]
 
         for ax, level in zip(axes, levels):
             subset = result_df[result_df["base_rate_level"] == level]
             channels = subset["channel"].values
             x = np.arange(len(channels))
-            width = 0.35
-
-            ax.bar(x - width / 2, subset["total_shapley"], width,
-                   label="Total Shapley", color="#45B7D1")
-            ax.bar(x + width / 2, subset["incremental_shapley"], width,
-                   label="Incremental Shapley", color="#DDA0DD")
-
+            for (col, label, color, edge), off in zip(SERIES, offsets):
+                ax.bar(x + off, subset[col], width, label=label, color=color,
+                       edgecolor=edge, linewidth=(1.1 if edge != "none" else 0.0))
             ax.set_xticks(x)
             ax.set_xticklabels(channels, rotation=45, ha="right", fontsize=8)
             base_rate = subset["base_rate"].iloc[0]
             ax.set_title(f"{level}\n(base={base_rate:.3f})", fontsize=10)
-            ax.legend(fontsize=8)
 
-        axes[0].set_ylabel("Channel Credit")
-        plt.suptitle("Experiment 06: Incremental vs Total Shapley", fontsize=14)
-        plt.tight_layout()
-        plt.savefig(f"{output_dir}/06_incremental_vs_total.png", dpi=150)
+        axes[0].set_ylabel("Channel credit share (Σ=1)")
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="lower center", ncol=len(SERIES),
+                   fontsize=8, frameon=False)
+        plt.suptitle(
+            "Experiment 06 — Two ground truths (GT_A conditional · GT_B incremental) vs credit operators\n"
+            "Incremental Shapley tracks GT_B; Total Shapley drifts past GT_A, then collapses for upper-funnel at high base",
+            fontsize=10,
+        )
+        plt.tight_layout(rect=[0, 0.06, 1, 0.93])
+        plt.savefig(f"{output_dir}/06_incremental_vs_total.png", dpi=150, bbox_inches="tight")
         plt.close()
 
     return result_df
